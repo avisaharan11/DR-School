@@ -174,7 +174,6 @@ function StudentInfoDisplay(props) {
           ) : <><button className="btn btn-success" onClick={() => setDepositingFees(true)}>New Fees Deposit</button></>}
         </div>
         <div className="text-center">
-          <button className="btn btn-primary" onClick={() => printStudentData()}>Print Details</button>
         </div>
       </div>
     </div>
