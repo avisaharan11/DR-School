@@ -88,14 +88,34 @@ function StudentInfoDisplay(props) {
       + currentdate.getSeconds();
     return datetime;
   }
-  function getDepositTotal(){
-    let deposits=[]
-    if(student.deposits){
-      for(let i=0;i<student.deposits.length;i++){
+  function getDepositTotal() {
+    let deposits = []
+    if (student.deposits) {
+      for (let i = 0; i < student.deposits.length; i++) {
         deposits.push(student.deposits[i][0])
       }
     }
     return deposits.reduce((partialSum, a) => Number(partialSum) + Number(a), 0)
+  }
+  function getTransactionHistory() {
+    return (
+      <>
+        <table className="table table-striped text-center table-sm">
+          <thead className="">
+            <tr>
+              <th colSpan="2">Fees Transactions History</th>
+            </tr>
+            <tr className="table-dark">
+              <th scope="col">Amount</th>
+              <th scope="col">Date</th>
+            </tr>
+          </thead>
+          <tbody>
+            {student.deposits ? student.deposits.map((deposit, key) => <tr key={key}><td>{deposit[0]}</td><td>{deposit[1]}</td></tr>) : null}
+          </tbody>
+        </table>
+      </>
+    )
   }
   return (
     <div className="card">
@@ -109,19 +129,24 @@ function StudentInfoDisplay(props) {
           <p className="card-text">Mother Name: {student.motherName}</p>
           <p className="card-text">Aadhaar Number: {student.aadhaarNumber}</p>
           <p className="card-text">SRN: {student.srn}</p>
+          {student.deposits ? getTransactionHistory() : null}
         </>
         ) : null}
-        <button className="btn btn-primary mb-3" onClick={() => setMoreDetails(!moreDetails)}>{moreDetails ? 'Show Less Details' : 'Show More Details'}</button><br></br>
-        {depositingFees ? (<>
-          <div className="input-group mb-3">
-            <div className="input-group-prepend">
-              <span className="input-group-text">Rs.</span>
-            </div>
-            <input type="number" className="form-control" onChange={(e) => setAmountToDeposit(e.target.value)} placeholder='Amount'></input>
-          </div><button className="btn btn-success mr-3" onClick={() => depositFees()}>Deposit</button> <button className="btn btn-danger mr-3" onClick={() => setDepositingFees(false)}>Cancel</button>
-        </>) : <><button className="btn btn-success" onClick={() => setDepositingFees(true)}>New Fees Deposit</button></>}
+        <div className="text-center">
+        <button className="btn btn-primary mb-3 " onClick={() => setMoreDetails(!moreDetails)}>{moreDetails ? 'Show Less Details' : 'Show More Details'}</button><br></br>
+          {depositingFees ? (
+          <>
+            <div className="input-group mb-3">
+              <div className="input-group-prepend">
+                <span className="input-group-text">Rs.</span>
+              </div>
+              <input type="number" autoFocus className="form-control" onChange={(e) => setAmountToDeposit(e.target.value)} placeholder='Amount'></input>
+            </div><button className="btn btn-success mr-3" onClick={() => depositFees()}>Deposit</button> <button className="btn btn-danger mr-3" onClick={() => setDepositingFees(false)}>Cancel</button>
+          </>
+          ) : <><button className="btn btn-success" onClick={() =>setDepositingFees(true)}>New Fees Deposit</button></>}
+          </div>
       </div>
-    </div>
+      </div>
   )
 }
 
