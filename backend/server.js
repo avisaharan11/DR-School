@@ -46,4 +46,11 @@ app.post('/api/DepositFees', async (req, res) => {
     res.send(confirm)
 })
 
+app.post('/api/updatePhoneNumber', async (req, res) => {
+    let condition={rollNumber:req.body.rollNumber}
+    let updation={$set:{contactNumbers:req.body.contactNumber}}
+    let confirm=await update(condition,updation).catch(console.dir);
+    res.send(confirm)
+})
+
 app.listen(3000, () => console.log(`Listening on 3000`))

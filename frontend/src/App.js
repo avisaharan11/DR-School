@@ -6,12 +6,14 @@ function App() {
   useEffect(() => { fetchData(); }, []);
   function fetchData() {
     axios.get("http://localhost:3000/api/allData").then((response) => {
-      //console.log(response.data);
       setData(response.data);
     });
   }
   return (
-    <CheckDataByAdmin data={data} fetchData={fetchData} />
+    <div className="container">
+      <h3 className="text-center">Students Information Management</h3>
+      <CheckDataByAdmin data={data} fetchData={fetchData} />
+    </div>
   );
 }
 
@@ -67,11 +69,18 @@ function StudentInfoDisplay(props) {
   let [moreDetails, setMoreDetails] = useState(false)
   let [depositingFees, setDepositingFees] = useState(false)
   let [amountToDeposit, setAmountToDeposit] = useState(0)
+  let [updatingPhoneNumber, setUpdatingPhoneNumber] = useState(false)
+  let [contactNumber, setContactNumber] = useState('')
+  useEffect(() => setUpdatingPhoneNumber(false), [student.contactNumbers])
   function depositFees() {
     if (amountToDeposit == 0) return alert('Please enter an amount to deposit')
     let confirmDeposit = window.confirm(`Are you sure you want to deposit Rs.${amountToDeposit} for ${student.name} (${student.rollNumber})`)
     if (confirmDeposit) {
-      axios.post("http://localhost:3000/api/depositFees", { rollNumber: student.rollNumber, amountToDeposit, dateOfDeposit: getDate() }).then((response) => { console.log(response.data) }).then(() => setDepositingFees(false)).then(() => setAmountToDeposit(0)).then(() => alert('Fees deposited successfully')).then(() => props.fetchData())
+      axios.post("http://localhost:3000/api/depositFees", { rollNumber: student.rollNumber, amountToDeposit, dateOfDeposit: getDate() })
+        .then((response) => {
+          if (response.data.acknowledged) setUpdatingPhoneNumber(false)
+          else throw new Error('Error updating phone number')
+        }).then(() => setDepositingFees(false)).then(() => setAmountToDeposit(0)).then(() => alert('Fees deposited successfully')).then(() => props.fetchData())
     }
     else {
       setAmountToDeposit(0)
@@ -117,13 +126,30 @@ function StudentInfoDisplay(props) {
       </>
     )
   }
+  function updatePhoneNumber() {
+    if (contactNumber == '') return alert('Please enter a phone number')
+    let confirmUpdate = window.confirm(`Are you sure you want to update the phone number for ${student.name} (${student.rollNumber})`)
+    if (confirmUpdate) {
+      axios.post("http://localhost:3000/api/updatePhoneNumber", { rollNumber: student.rollNumber, contactNumber })
+        .then((response) => {
+          if (response.data.acknowledged) setUpdatingPhoneNumber(false)
+          else throw new Error('Error updating phone number')
+        }).then(() => setContactNumber('')).then(() => alert('Phone number updated successfully')).then(() => props.fetchData()).catch((err) => alert(err))
+    }
+    else {
+      setContactNumber('')
+      setUpdatingPhoneNumber(false)
+    }
+  }
   return (
     <div className="card">
       <div className="card-body">
         <h5 className="card-title">{student.name}</h5>
         <h6 className="card-subtitle mb-2 text-muted">{student.rollNumber}</h6>
         <p className="card-text">Guardian Name: {student.fatherName}</p>
-        <p className="card-text">Phone: <a href={`tel:${student.contactNumbers}`}>&#128222;{student.contactNumbers}</a></p>
+        {updatingPhoneNumber ?
+          (<p className="card-text">Phone <input type="number" autoFocus onChange={(e) => setContactNumber(e.target.value)} placeholder='New Phone Number' onKeyDown={(e)=>{if(e.key==='Enter') updatePhoneNumber()}}></input><button type="button" className="btn btn-success me-1 ms-1 m-auto" onClick={() => updatePhoneNumber()}>Save</button><button type="button" className="btn btn-danger" onClick={() => setUpdatingPhoneNumber(false)}>Cancel</button></p>)
+          : (<p className="card-text">Phone: {student.contactNumbers ? <a style={{ textDecoration: 'none' }} href={`tel:${student.contactNumbers}`}>&#128222;{student.contactNumbers}</a> : null}<button type="button" className="btn btn-warning ms-3" onClick={() => setUpdatingPhoneNumber(true)}>Update</button> </p>)}
         <p className="card-text">Fees Pending: {Number(student.feesPending2122 ? student.feesPending2122 : 0 + student.feesPending2223 ? student.feesPending2223 : 0) - (student.deposits ? getDepositTotal() : 0)}</p>
         {moreDetails ? (<>
           <p className="card-text">Mother Name: {student.motherName}</p>
@@ -133,20 +159,21 @@ function StudentInfoDisplay(props) {
         </>
         ) : null}
         <div className="text-center">
-        <button className="btn btn-primary mb-3 " onClick={() => setMoreDetails(!moreDetails)}>{moreDetails ? 'Show Less Details' : 'Show More Details'}</button><br></br>
+          <button className="btn btn-primary mb-3 " onClick={() => setMoreDetails(!moreDetails)}>{moreDetails ? 'Show Less Details ↑' : 'Show More Details ↓' }</button><br></br>
           {depositingFees ? (
-          <>
-            <div className="input-group mb-3">
-              <div className="input-group-prepend">
-                <span className="input-group-text">Rs.</span>
+            <>
+              <div className="input-group mb-3">
+                <div className="input-group-prepend">
+                  <span className="input-group-text">Rs.</span>
+                </div>
+                <input type="number" autoFocus className="form-control" onChange={(e) => setAmountToDeposit(e.target.value)} onKeyDown={(e)=>{if(e.key==='Enter') depositFees()}} placeholder='Amount'></input>
               </div>
-              <input type="number" autoFocus className="form-control" onChange={(e) => setAmountToDeposit(e.target.value)} placeholder='Amount'></input>
-            </div><button className="btn btn-success mr-3" onClick={() => depositFees()}>Deposit</button> <button className="btn btn-danger mr-3" onClick={() => setDepositingFees(false)}>Cancel</button>
-          </>
-          ) : <><button className="btn btn-success" onClick={() =>setDepositingFees(true)}>New Fees Deposit</button></>}
-          </div>
+              <button className="btn btn-success mr-3" onClick={() => depositFees()}>Deposit</button> <button className="btn btn-danger mr-3" onClick={() => setDepositingFees(false)}>Cancel</button>
+            </>
+          ) : <><button className="btn btn-success" onClick={() => setDepositingFees(true)}>New Fees Deposit</button></>}
+        </div>
       </div>
-      </div>
+    </div>
   )
 }
 
