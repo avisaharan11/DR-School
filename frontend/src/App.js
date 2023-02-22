@@ -11,7 +11,7 @@ function App() {
   }
   return (
     <div className="container">
-      <h3 className="text-center">Students Information Management</h3>
+      <Navbar />
       <CheckDataByAdmin data={data} fetchData={fetchData} />
     </div>
   );
@@ -38,27 +38,27 @@ function CheckDataByAdmin(props) {
 
   return (
     <>
-      <form>
-        <div className="form-group mb-3">
-          <label htmlFor="classGrade">Class</label>
-          <select className="form-select" aria-label="Select Class" name="classGrade" ref={classGradeRef} onChange={(e) => setClassGrade(e.target.value)}>
-            {classGrade == 0 ? <option value={0}>Select Class</option> : null}
-            {classGrades.map((grade) => <option key={grade} value={grade}>{grade}</option>)}
-          </select>
-        </div>
-        <div className="form-group mb-3">
-          <label htmlFor="name">Name</label>
-          <select className="form-select" aria-label="Select Student" name="name" ref={nameRef} onChange={(e) => setName(e.target.value)}>
-            {data.filter((student) => student.classGrade == classGrade).map((student) => <option key={student.rollNumber} value={student.name}>{student.name}</option>)}
-          </select>
-        </div>
-        <div className="form-group mb-3">
-          <label htmlFor="rollNumberAndGuardian">Roll Number and Guardian Name</label>
-          <select className="form-select" aria-label="Select Roll Number & Guardian Name" ref={rollNumberRef} name="rollNumberAndGuardian" onChange={e => setRollNumber(e.target.value)}>
-            {filterData().map((student) => <option key={student.rollNumber} value={student.rollNumber}>{student.rollNumber} & {student.fatherName}</option>)}
-          </select>
-        </div>
-      </form>
+        <form>
+          <div className="form-group mb-3">
+            <label htmlFor="classGrade">Class</label>
+            <select className="form-select" aria-label="Select Class" name="classGrade" ref={classGradeRef} onChange={(e) => setClassGrade(e.target.value)}>
+              {classGrade == 0 ? <option value={0}>Select Class</option> : null}
+              {classGrades.map((grade) => <option key={grade} value={grade}>{grade}</option>)}
+            </select>
+          </div>
+          <div className="form-group mb-3">
+            <label htmlFor="name">Name</label>
+            <select className="form-select" aria-label="Select Student" name="name" ref={nameRef} onChange={(e) => setName(e.target.value)}>
+              {data.filter((student) => student.classGrade == classGrade).map((student) => <option key={student.rollNumber} value={student.name}>{student.name}</option>)}
+            </select>
+          </div>
+          <div className="form-group mb-3">
+            <label htmlFor="rollNumberAndGuardian">Roll Number and Guardian Name</label>
+            <select className="form-select" aria-label="Select Roll Number & Guardian Name" ref={rollNumberRef} name="rollNumberAndGuardian" onChange={e => setRollNumber(e.target.value)}>
+              {filterData().map((student) => <option key={student.rollNumber} value={student.rollNumber}>{student.rollNumber} & {student.fatherName}</option>)}
+            </select>
+          </div>
+        </form>
       {rollNumber != 0 ? <StudentInfoDisplay student={data.find((student) => student.rollNumber == rollNumber)} fetchData={props.fetchData} /> : null}
     </>
   );
@@ -141,6 +141,7 @@ function StudentInfoDisplay(props) {
       setUpdatingPhoneNumber(false)
     }
   }
+
   return (
     <div className="card">
       <div className="card-body">
@@ -148,7 +149,7 @@ function StudentInfoDisplay(props) {
         <h6 className="card-subtitle mb-2 text-muted">{student.rollNumber}</h6>
         <p className="card-text">Guardian Name: {student.fatherName}</p>
         {updatingPhoneNumber ?
-          (<p className="card-text">Phone <input type="number" autoFocus onChange={(e) => setContactNumber(e.target.value)} placeholder='New Phone Number' onKeyDown={(e)=>{if(e.key==='Enter') updatePhoneNumber()}}></input><button type="button" className="btn btn-success me-1 ms-1 m-auto" onClick={() => updatePhoneNumber()}>Save</button><button type="button" className="btn btn-danger" onClick={() => setUpdatingPhoneNumber(false)}>Cancel</button></p>)
+          (<p className="card-text">Phone <input type="number" autoFocus onChange={(e) => setContactNumber(e.target.value)} placeholder='New Phone Number' onKeyDown={(e) => { if (e.key === 'Enter') updatePhoneNumber() }}></input><button type="button" className="btn btn-success me-1 ms-1 m-auto" onClick={() => updatePhoneNumber()}>Save</button><button type="button" className="btn btn-danger" onClick={() => setUpdatingPhoneNumber(false)}>Cancel</button></p>)
           : (<p className="card-text">Phone: {student.contactNumbers ? <a style={{ textDecoration: 'none' }} href={`tel:${student.contactNumbers}`}>&#128222;{student.contactNumbers}</a> : null}<button type="button" className="btn btn-warning ms-3" onClick={() => setUpdatingPhoneNumber(true)}>Update</button> </p>)}
         <p className="card-text">Fees Pending: {Number(student.feesPending2122 ? student.feesPending2122 : 0 + student.feesPending2223 ? student.feesPending2223 : 0) - (student.deposits ? getDepositTotal() : 0)}</p>
         {moreDetails ? (<>
@@ -159,21 +160,35 @@ function StudentInfoDisplay(props) {
         </>
         ) : null}
         <div className="text-center">
-          <button className="btn btn-primary mb-3 " onClick={() => setMoreDetails(!moreDetails)}>{moreDetails ? 'Show Less Details ↑' : 'Show More Details ↓' }</button><br></br>
+          <button className="btn btn-primary mb-3 " onClick={() => setMoreDetails(!moreDetails)}>{moreDetails ? 'Show Less Details ↑' : 'Show More Details ↓'}</button><br></br>
           {depositingFees ? (
             <>
               <div className="input-group mb-3">
                 <div className="input-group-prepend">
                   <span className="input-group-text">Rs.</span>
                 </div>
-                <input type="number" autoFocus className="form-control" onChange={(e) => setAmountToDeposit(e.target.value)} onKeyDown={(e)=>{if(e.key==='Enter') depositFees()}} placeholder='Amount'></input>
+                <input type="number" autoFocus className="form-control" onChange={(e) => setAmountToDeposit(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') depositFees() }} placeholder='Amount'></input>
               </div>
               <button className="btn btn-success mr-3" onClick={() => depositFees()}>Deposit</button> <button className="btn btn-danger mr-3" onClick={() => setDepositingFees(false)}>Cancel</button>
             </>
           ) : <><button className="btn btn-success" onClick={() => setDepositingFees(true)}>New Fees Deposit</button></>}
         </div>
+        <div className="text-center">
+          <button className="btn btn-primary" onClick={() => printStudentData()}>Print Details</button>
+        </div>
       </div>
     </div>
+  )
+}
+
+function Navbar() {
+  return (
+    <nav className="navbar navbar-light sticky-top">
+      <a className="navbar-brand" href="#">
+        <img src="/images/logoIcon.ico" width="30" height="30" className="d-inline-block align-top" alt=""></img>
+        DR School Information Management
+      </a>
+    </nav>
   )
 }
 
