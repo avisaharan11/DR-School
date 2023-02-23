@@ -32,6 +32,8 @@ async function update(condition, updation) {
     }
 }
 
+app.get('/', (req, res) => res.send('Hello World!'))
+
 app.get('/api/allData', async (req, res) => {
     let query={}
     let data=await find(query).catch(console.dir);
@@ -53,4 +55,4 @@ app.post('/api/updatePhoneNumber', async (req, res) => {
     res.send(confirm)
 })
 
-app.listen(3000, () => console.log(`Listening on 3000`))
+app.listen(3001, () => console.log(`Listening on 3001`))
