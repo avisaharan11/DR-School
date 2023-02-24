@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef } from "react";
 import * as Realm from "realm-web";
+import logoIcon from './/images/logoIcon.ico'
 
 async function getUser() {
   const app = new Realm.App({ id: "application-1-kaqni" });
@@ -145,7 +146,7 @@ function StudentInfoDisplay(props) {
     if (contactNumber == '') return alert('Please enter a phone number')
     let confirmUpdate = window.confirm(`Are you sure you want to update the phone number for ${student.name} (${student.rollNumber}) to ${contactNumber}`)
     async function update() {
-      let updated=await api.functions.firstCheck('updatePhoneNumber', { rollNumber: student.rollNumber, contactNumber })
+      await api.functions.firstCheck('updatePhoneNumber', { rollNumber: student.rollNumber, contactNumber })
       setUpdatingPhoneNumber(false)
       setContactNumber('')
       alert('Phone number updated successfully')
@@ -196,7 +197,7 @@ function Navbar() {
   return (
     <nav className="navbar sticky-top" style={{ backgroundColor: 'white' }} >
       <a className="navbar-brand" href="#">
-        <img src="/images/logoIcon.ico" width="30" height="30" className="d-inline-block align-top" alt=""></img>
+        <img src={logoIcon} width="30" height="30" className="d-inline-block align-top" alt=""></img>
         DR School Information Management
       </a>
     </nav>
