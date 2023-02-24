@@ -17,8 +17,8 @@ function App() {
   let [api, setApi] = useState({});
   let [data, setData] = useState([]);
   async function fetchData() {
-    api= await getUser()
-    let students= await api.functions.firstCheck('getStudentsInfo')
+    api = await getUser()
+    let students = await api.functions.firstCheck('getStudentsInfo')
     setData(students);
     setApi(api)
   }
@@ -27,7 +27,7 @@ function App() {
     <div className="container">
       <Navbar />
       <CheckDataByAdmin data={data} fetchData={fetchData} api={api} />
-      <ScrollToTopButton />
+      {/* <ScrollToTopButton /> */}
     </div>
   );
 }
@@ -38,7 +38,7 @@ function CheckDataByAdmin(props) {
   const rollNumberRef = useRef('');
 
   let data = props.data;
-  let api=props.api
+  let api = props.api
   let classGrades = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
   let [name, setName] = useState("")
   let [classGrade, setClassGrade] = useState(0)
@@ -75,13 +75,13 @@ function CheckDataByAdmin(props) {
           </select>
         </div> : null}
       </form>
-      {(rollNumber && rollNumber != 0) ? <StudentInfoDisplay student={data.find((student) => student.rollNumber == rollNumber)} fetchData={props.fetchData}  api={api}/> : null}
+      {(rollNumber && rollNumber != 0) ? <StudentInfoDisplay student={data.find((student) => student.rollNumber == rollNumber)} fetchData={props.fetchData} api={api} /> : null}
     </>
   );
 }
 
 function StudentInfoDisplay(props) {
-  let api=props.api
+  let api = props.api
   let student = props.student
   let [moreDetails, setMoreDetails] = useState(false)
   let [depositingFees, setDepositingFees] = useState(false)
@@ -89,13 +89,15 @@ function StudentInfoDisplay(props) {
   let [contactNumber, setContactNumber] = useState('')
   let contactNumberRef = useRef('')
   let amountToDepositRef = useRef(0)
+  let feesDepositCancelRef = useRef('')
   useEffect(() => { setUpdatingPhoneNumber(false); setContactNumber('') }, [student.contactNumbers])
   useEffect(() => { setUpdatingPhoneNumber(false); setDepositingFees(false) }, [student.rollNumber])
+  useEffect(() => { if(depositingFees) feesDepositCancelRef.current.scrollIntoView()}, [depositingFees])
   function depositFees() {
     if (amountToDepositRef.current.value == 0) return alert('Please enter an amount to deposit')
-    let confirmDeposit = window.confirm(`Are you sure you want to deposit Rs.${amountToDepositRef.current.value} for ${student.name} (${student.rollNumber})`)
+    let confirmDeposit = window.confirm(`Confirm deposit Rs.${amountToDepositRef.current.value} for ${student.name} (${student.rollNumber})`)
     async function deposit() {
-      let deposited=await api.functions.firstCheck('depositFees', { rollNumber: student.rollNumber, amountToDeposit: amountToDepositRef.current.value, dateOfDeposit: getDate() })
+      let deposited = await api.functions.firstCheck('depositFees', { rollNumber: student.rollNumber, amountToDeposit: amountToDepositRef.current.value, dateOfDeposit: getDate() })
       setDepositingFees(false)
       setUpdatingPhoneNumber(false)
       alert('Fees deposited successfully')
@@ -123,20 +125,30 @@ function StudentInfoDisplay(props) {
     return deposits.reduce((partialSum, a) => Number(partialSum) + Number(a), 0)
   }
   function getTransactionHistory() {
+    function getTransactionTotal() {
+      let transactions = []
+      if (student.deposits) {
+        for (let i = 0; i < student.deposits.length; i++) {
+          transactions.push(student.deposits[i][0])
+        }
+      }
+      return transactions.reduce((partialSum, a) => Number(partialSum) + Number(a), 0)
+    }
     return (
       <>
-        <table className="table table-striped text-center table-sm">
+        <table className="table table-striped table-sm">
           <thead className="">
             <tr>
-              <th colSpan="2">Fees Transactions History</th>
+              <th colSpan="2" style={{ textAlign: 'center' }}>Fees Transactions History</th>
             </tr>
             <tr className="table-dark">
-              <th scope="col">Amount</th>
               <th scope="col">Date</th>
+              <th scope="col">Amount</th>
             </tr>
           </thead>
           <tbody>
-            {student.deposits ? student.deposits.map((deposit, key) => <tr key={key}><td>{deposit[0]}</td><td>{deposit[1]}</td></tr>) : null}
+            {student.deposits.map((deposit, key) => <tr key={key}><td>{deposit[1]}</td><td>{deposit[0]}</td></tr>)}
+            {student.deposits.length > 1 ? <tr className="table-dark"><td>Total Deposits</td><td>{getTransactionTotal()}</td></tr> : null}
           </tbody>
         </table>
       </>
@@ -144,7 +156,7 @@ function StudentInfoDisplay(props) {
   }
   function updatePhoneNumber() {
     if (contactNumber == '') return alert('Please enter a phone number')
-    let confirmUpdate = window.confirm(`Are you sure you want to update the phone number for ${student.name} (${student.rollNumber}) to ${contactNumber}`)
+    let confirmUpdate = window.confirm(`Confirm phone number ${contactNumber} for ${student.name} (${student.rollNumber})`)
     async function update() {
       await api.functions.firstCheck('updatePhoneNumber', { rollNumber: student.rollNumber, contactNumber })
       setUpdatingPhoneNumber(false)
@@ -162,7 +174,7 @@ function StudentInfoDisplay(props) {
         <h6 className="card-subtitle mb-2 text-muted">{student.rollNumber}</h6>
         <p className="card-text">Guardian Name: {student.fatherName}</p>
         {updatingPhoneNumber ?
-          (<p className="card-text">Phone <input type="number" autoFocus ref={contactNumberRef} onChange={(e) => setContactNumber(e.target.value)} placeholder='New Phone Number' onKeyDown={(e) => { if (e.key === 'Enter') updatePhoneNumber() }}></input><button type="button" className="btn btn-success me-1 ms-1 m-auto" onClick={() => updatePhoneNumber()}>Save</button><button type="button" className="btn btn-danger" onClick={() => { setUpdatingPhoneNumber(false); setContactNumber(''); }}>Cancel</button></p>)
+          (<div className="card-text">Phone <input type="number" className="form-control" autoFocus ref={contactNumberRef} onChange={(e) => setContactNumber(e.target.value)} placeholder='New Phone Number' onKeyDown={(e) => { if (e.key === 'Enter') updatePhoneNumber() }}></input><div className=" container text-center mt-2"><div className="row"><button type="button" className="btn btn-success mb-1" onClick={() => updatePhoneNumber()}>Save</button><button type="button" className="btn btn-danger mb-3" onClick={() => { setUpdatingPhoneNumber(false); setContactNumber(''); }}>Cancel</button></div></div></div>)
           : (<p className="card-text">Phone: {student.contactNumbers ? <a style={{ textDecoration: 'none' }} href={`tel:${student.contactNumbers}`}>&#128222;{student.contactNumbers}</a> : null}<button type="button" className="btn btn-warning ms-3" onClick={() => setUpdatingPhoneNumber(true)}>Update</button> </p>)}
         <p className="card-text">Fees Pending: {Number(student.feesPending2122 ? student.feesPending2122 : 0 + student.feesPending2223 ? student.feesPending2223 : 0) - (student.deposits ? getDepositTotal() : 0)}</p>
         {moreDetails ? (<>
@@ -172,22 +184,19 @@ function StudentInfoDisplay(props) {
           {student.deposits ? getTransactionHistory() : null}
         </>
         ) : null}
-        <div className="text-center">
-          <button className="btn btn-primary mb-3 " onClick={() => setMoreDetails(!moreDetails)}>{moreDetails ? 'Show Less Details ↑' : 'Show More Details ↓'}</button><br></br>
-          {depositingFees ? (
-            <>
-              <div className="input-group mb-3">
-                <div className="input-group-prepend">
-                  <span className="input-group-text">Rs.</span>
-                </div>
-                <input type="number" autoFocus className="form-control" ref={amountToDepositRef} onKeyDown={(e) => { if (e.key === 'Enter') depositFees() }} placeholder='Amount'></input>
+        <div className="row"><button className="btn btn-primary mb-2 mt-n3 " onClick={() => setMoreDetails(!moreDetails)}>{moreDetails ? 'Show Less Details ↑' : 'Show More Details ↓'}</button></div>
+        {depositingFees ? (
+          <>
+            <div className="input-group mb-3">
+              <div className="input-group-prepend">
+                <span className="input-group-text">Rs.</span>
               </div>
-              <button className="btn btn-success mr-3" onClick={() => depositFees()}>Deposit</button> <button className="btn btn-danger mr-3" onClick={() => { setDepositingFees(false) }}>Cancel</button>
-            </>
-          ) : <><button className="btn btn-success" onClick={() => setDepositingFees(true)}>New Fees Deposit</button></>}
-        </div>
-        <div className="text-center">
-        </div>
+              <input type="number" autoFocus className="form-control" ref={amountToDepositRef} onFocus={()=>{if(feesDepositCancelRef.current)feesDepositCancelRef.current.scrollIntoView()}} onKeyDown={(e) => { if (e.key === 'Enter') depositFees() }} placeholder='Amount'></input>
+            </div>
+
+            <div className="row"><button className="btn btn-success mb-1" onClick={() => depositFees()}>Deposit</button> <button className="btn btn-danger" onClick={() => { setDepositingFees(false) }}>Cancel</button></div><p ref={feesDepositCancelRef}></p>
+          </>
+        ) : <div className="row"><button className="btn btn-success" onClick={() => setDepositingFees(true)}>New Fees Deposit</button></div>}
       </div>
     </div>
   )
@@ -198,7 +207,7 @@ function Navbar() {
     <nav className="navbar sticky-top" style={{ backgroundColor: 'white' }} >
       <a className="navbar-brand" href="#">
         <img src={logoIcon} width="30" height="30" className="d-inline-block align-top" alt=""></img>
-        DR School Information Management
+        DR School - Info
       </a>
     </nav>
   )
@@ -218,7 +227,7 @@ function ScrollToTopButton() {
   };
   window.addEventListener('scroll', checkScrollTop)
   return (
-    <button className="scrollTop btn btn-outline-success" type="button" onClick={scrollTop} style={{ display: showScroll ? 'block' : 'none', position: 'fixed', bottom: '20px', right: '20px', }}>↑</button>
+    <button className="scrollTop btn btn-outline-success btn-lg" type="button" onClick={scrollTop} style={{ display: showScroll ? 'block' : 'none', position: 'fixed', bottom: '20px', right: '20px', }}>↑</button>
   );
 }
 
