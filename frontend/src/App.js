@@ -1,18 +1,31 @@
 import { useEffect, useState, useRef } from "react";
-import axios from "axios";
+import * as Realm from "realm-web";
+
+async function getUser() {
+  const app = new Realm.App({ id: "application-1-kaqni" });
+  const credentials = Realm.Credentials.anonymous();
+  try {
+    const user = await app.logIn(credentials);
+    return user;
+  } catch (err) {
+    console.error("Failed to log in", err);
+  }
+}
 
 function App() {
+  let [api, setApi] = useState({});
   let [data, setData] = useState([]);
-  function fetchData() {
-    axios.get("http://localhost:3001/api/allData").then((response) => {
-      setData(response.data);
-    });
+  async function fetchData() {
+    api= await getUser()
+    let students= await api.functions.firstCheck('getStudentsInfo')
+    setData(students);
+    setApi(api)
   }
   useEffect(() => { fetchData(); }, []);
   return (
     <div className="container">
       <Navbar />
-      <CheckDataByAdmin data={data} fetchData={fetchData} />
+      <CheckDataByAdmin data={data} fetchData={fetchData} api={api} />
       <ScrollToTopButton />
     </div>
   );
@@ -24,6 +37,7 @@ function CheckDataByAdmin(props) {
   const rollNumberRef = useRef('');
 
   let data = props.data;
+  let api=props.api
   let classGrades = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
   let [name, setName] = useState("")
   let [classGrade, setClassGrade] = useState(0)
@@ -39,33 +53,34 @@ function CheckDataByAdmin(props) {
 
   return (
     <>
-        <form>
-          <div className="form-group mb-3">
-            <label htmlFor="classGrade">Class</label>
-            <select className="form-select" aria-label="Select Class" name="classGrade" ref={classGradeRef} onChange={(e) => setClassGrade(e.target.value)}>
-              {data.length>0?(classGrade==0?<option>Select Class</option>:null):<option>Loading Data...</option>}
-              {data.length>0?(classGrades.map((grade) => <option key={grade} value={grade}>{grade}</option>)):null}
-            </select>
-          </div>
-          {classGrade && classGrade>0?<div className="form-group mb-3">
-            <label htmlFor="name">Name</label>
-            <select className="form-select" aria-label="Select Student" name="name" ref={nameRef} onChange={(e) => setName(e.target.value)}>
-              {data.filter((student) => student.classGrade == classGrade).map((student) => <option key={student.rollNumber} value={student.name}>{student.name}</option>)}
-            </select>
-          </div>:null}
-          {name && name.length>0?<div className="form-group mb-3">
-            <label htmlFor="rollNumberAndGuardian">Roll Number and Guardian Name</label>
-            <select className="form-select" aria-label="Select Roll Number & Guardian Name" ref={rollNumberRef} name="rollNumberAndGuardian" onChange={e => setRollNumber(e.target.value)}>
-              {filterData().map((student) => <option key={student.rollNumber} value={student.rollNumber}>{student.rollNumber} & {student.fatherName}</option>)}
-            </select>
-          </div>:null}
-        </form>
-        {(rollNumber && rollNumber != 0) ? <StudentInfoDisplay student={data.find((student) => student.rollNumber == rollNumber)} fetchData={props.fetchData} /> : null}
-      </>
+      <form>
+        <div className="form-group mb-3">
+          <label htmlFor="classGrade">Class</label>
+          <select className="form-select" aria-label="Select Class" name="classGrade" ref={classGradeRef} onChange={(e) => setClassGrade(e.target.value)}>
+            {data.length > 0 ? (classGrade == 0 ? <option>Select Class</option> : null) : <option>Loading Data...</option>}
+            {data.length > 0 ? (classGrades.map((grade) => <option key={grade} value={grade}>{grade}</option>)) : null}
+          </select>
+        </div>
+        {classGrade && classGrade > 0 ? <div className="form-group mb-3">
+          <label htmlFor="name">Name</label>
+          <select className="form-select" aria-label="Select Student" name="name" ref={nameRef} onChange={(e) => setName(e.target.value)}>
+            {data.filter((student) => student.classGrade == classGrade).map((student) => <option key={student.rollNumber} value={student.name}>{student.name}</option>)}
+          </select>
+        </div> : null}
+        {name && name.length > 0 ? <div className="form-group mb-3">
+          <label htmlFor="rollNumberAndGuardian">Roll Number and Guardian Name</label>
+          <select className="form-select" aria-label="Select Roll Number & Guardian Name" ref={rollNumberRef} name="rollNumberAndGuardian" onChange={e => setRollNumber(e.target.value)}>
+            {filterData().map((student) => <option key={student.rollNumber} value={student.rollNumber}>{student.rollNumber} & {student.fatherName}</option>)}
+          </select>
+        </div> : null}
+      </form>
+      {(rollNumber && rollNumber != 0) ? <StudentInfoDisplay student={data.find((student) => student.rollNumber == rollNumber)} fetchData={props.fetchData}  api={api}/> : null}
+    </>
   );
 }
 
 function StudentInfoDisplay(props) {
+  let api=props.api
   let student = props.student
   let [moreDetails, setMoreDetails] = useState(false)
   let [depositingFees, setDepositingFees] = useState(false)
@@ -73,18 +88,19 @@ function StudentInfoDisplay(props) {
   let [contactNumber, setContactNumber] = useState('')
   let contactNumberRef = useRef('')
   let amountToDepositRef = useRef(0)
-  useEffect(() => {setUpdatingPhoneNumber(false); setContactNumber('')}, [student.contactNumbers])
-  useEffect(() => {setUpdatingPhoneNumber(false);setDepositingFees(false)}, [student.rollNumber])
+  useEffect(() => { setUpdatingPhoneNumber(false); setContactNumber('') }, [student.contactNumbers])
+  useEffect(() => { setUpdatingPhoneNumber(false); setDepositingFees(false) }, [student.rollNumber])
   function depositFees() {
     if (amountToDepositRef.current.value == 0) return alert('Please enter an amount to deposit')
     let confirmDeposit = window.confirm(`Are you sure you want to deposit Rs.${amountToDepositRef.current.value} for ${student.name} (${student.rollNumber})`)
-    if (confirmDeposit) {
-      axios.post("http://localhost:3001/api/depositFees", { rollNumber: student.rollNumber, amountToDeposit:amountToDepositRef.current.value, dateOfDeposit: getDate() })
-        .then((response) => {
-          if (response.data.acknowledged) setUpdatingPhoneNumber(false)
-          else throw new Error('Error depositing fees.')
-        }).then(() => setDepositingFees(false)).then(() => alert('Fees deposited successfully')).then(() => props.fetchData())
+    async function deposit() {
+      let deposited=await api.functions.firstCheck('depositFees', { rollNumber: student.rollNumber, amountToDeposit: amountToDepositRef.current.value, dateOfDeposit: getDate() })
+      setDepositingFees(false)
+      setUpdatingPhoneNumber(false)
+      alert('Fees deposited successfully')
+      props.fetchData()
     }
+    if (confirmDeposit) deposit()
   }
   function getDate() {
     var currentdate = new Date();
@@ -128,17 +144,14 @@ function StudentInfoDisplay(props) {
   function updatePhoneNumber() {
     if (contactNumber == '') return alert('Please enter a phone number')
     let confirmUpdate = window.confirm(`Are you sure you want to update the phone number for ${student.name} (${student.rollNumber}) to ${contactNumber}`)
-    if (confirmUpdate) {
-      axios.post("http://localhost:3001/api/updatePhoneNumber", { rollNumber: student.rollNumber, contactNumber })
-        .then((response) => {
-          if (response.data.acknowledged) setUpdatingPhoneNumber(false)
-          else throw new Error('Error updating phone number')
-        }).then(() => setContactNumber('')).then(() => alert('Phone number updated successfully')).then(() => props.fetchData()).catch((err) => alert(err))
+    async function update() {
+      let updated=await api.functions.firstCheck('updatePhoneNumber', { rollNumber: student.rollNumber, contactNumber })
+      setUpdatingPhoneNumber(false)
+      setContactNumber('')
+      alert('Phone number updated successfully')
+      props.fetchData()
     }
-    // else {
-    //   setContactNumber('')
-    //   setUpdatingPhoneNumber(false)
-    // }
+    if (confirmUpdate) update()
   }
 
   return (
@@ -148,7 +161,7 @@ function StudentInfoDisplay(props) {
         <h6 className="card-subtitle mb-2 text-muted">{student.rollNumber}</h6>
         <p className="card-text">Guardian Name: {student.fatherName}</p>
         {updatingPhoneNumber ?
-          (<p className="card-text">Phone <input type="number" autoFocus ref={contactNumberRef} onChange={(e) => setContactNumber(e.target.value)} placeholder='New Phone Number' onKeyDown={(e) => { if (e.key === 'Enter') updatePhoneNumber() }}></input><button type="button" className="btn btn-success me-1 ms-1 m-auto" onClick={() => updatePhoneNumber()}>Save</button><button type="button" className="btn btn-danger" onClick={() => {setUpdatingPhoneNumber(false); setContactNumber('');}}>Cancel</button></p>)
+          (<p className="card-text">Phone <input type="number" autoFocus ref={contactNumberRef} onChange={(e) => setContactNumber(e.target.value)} placeholder='New Phone Number' onKeyDown={(e) => { if (e.key === 'Enter') updatePhoneNumber() }}></input><button type="button" className="btn btn-success me-1 ms-1 m-auto" onClick={() => updatePhoneNumber()}>Save</button><button type="button" className="btn btn-danger" onClick={() => { setUpdatingPhoneNumber(false); setContactNumber(''); }}>Cancel</button></p>)
           : (<p className="card-text">Phone: {student.contactNumbers ? <a style={{ textDecoration: 'none' }} href={`tel:${student.contactNumbers}`}>&#128222;{student.contactNumbers}</a> : null}<button type="button" className="btn btn-warning ms-3" onClick={() => setUpdatingPhoneNumber(true)}>Update</button> </p>)}
         <p className="card-text">Fees Pending: {Number(student.feesPending2122 ? student.feesPending2122 : 0 + student.feesPending2223 ? student.feesPending2223 : 0) - (student.deposits ? getDepositTotal() : 0)}</p>
         {moreDetails ? (<>
@@ -168,7 +181,7 @@ function StudentInfoDisplay(props) {
                 </div>
                 <input type="number" autoFocus className="form-control" ref={amountToDepositRef} onKeyDown={(e) => { if (e.key === 'Enter') depositFees() }} placeholder='Amount'></input>
               </div>
-              <button className="btn btn-success mr-3" onClick={() => depositFees()}>Deposit</button> <button className="btn btn-danger mr-3" onClick={() => {setDepositingFees(false)}}>Cancel</button>
+              <button className="btn btn-success mr-3" onClick={() => depositFees()}>Deposit</button> <button className="btn btn-danger mr-3" onClick={() => { setDepositingFees(false) }}>Cancel</button>
             </>
           ) : <><button className="btn btn-success" onClick={() => setDepositingFees(true)}>New Fees Deposit</button></>}
         </div>
@@ -181,7 +194,7 @@ function StudentInfoDisplay(props) {
 
 function Navbar() {
   return (
-    <nav className="navbar sticky-top" style={{backgroundColor:'white'}} >
+    <nav className="navbar sticky-top" style={{ backgroundColor: 'white' }} >
       <a className="navbar-brand" href="#">
         <img src="/images/logoIcon.ico" width="30" height="30" className="d-inline-block align-top" alt=""></img>
         DR School Information Management
@@ -190,22 +203,22 @@ function Navbar() {
   )
 }
 
-function ScrollToTopButton(){
+function ScrollToTopButton() {
   const [showScroll, setShowScroll] = useState(false)
   const checkScrollTop = () => {
-    if (!showScroll && window.pageYOffset > 40){
+    if (!showScroll && window.pageYOffset > 40) {
       setShowScroll(true)
-    } else if (showScroll && window.pageYOffset <= 40){
+    } else if (showScroll && window.pageYOffset <= 40) {
       setShowScroll(false)
     }
   };
-  const scrollTop = () =>{
-    window.scrollTo({top: 0, behavior: 'smooth'});
+  const scrollTop = () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
   window.addEventListener('scroll', checkScrollTop)
   return (
-    <button className="scrollTop btn btn-outline-success" type="button" onClick={scrollTop} style={{display: showScroll ? 'block' : 'none',   position: 'fixed', bottom: '20px', right: '20px', }}>↑</button>
+    <button className="scrollTop btn btn-outline-success" type="button" onClick={scrollTop} style={{ display: showScroll ? 'block' : 'none', position: 'fixed', bottom: '20px', right: '20px', }}>↑</button>
   );
 }
- 
+
 export default App;
