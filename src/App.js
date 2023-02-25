@@ -17,10 +17,9 @@ function App() {
   let [api, setApi] = useState({});
   let [data, setData] = useState([]);
   async function fetchData() {
-    api = await getUser()
+    if (api && Object.keys(api).length === 0) { api = await getUser(); setApi(api);console.log(api) }
     let students = await api.functions.firstCheck('getStudentsInfo')
     setData(students);
-    setApi(api)
   }
   useEffect(() => { fetchData(); }, []);
   return (
@@ -92,7 +91,7 @@ function StudentInfoDisplay(props) {
   let feesDepositCancelRef = useRef('')
   useEffect(() => { setUpdatingPhoneNumber(false); setContactNumber('') }, [student.contactNumbers])
   useEffect(() => { setUpdatingPhoneNumber(false); setDepositingFees(false) }, [student.rollNumber])
-  useEffect(() => { if(depositingFees) feesDepositCancelRef.current.scrollIntoView()}, [depositingFees])
+  useEffect(() => { if (depositingFees) feesDepositCancelRef.current.scrollIntoView() }, [depositingFees])
   function depositFees() {
     if (amountToDepositRef.current.value == 0) return alert('Please enter an amount to deposit')
     let confirmDeposit = window.confirm(`Confirm deposit Rs.${amountToDepositRef.current.value} for ${student.name} (${student.rollNumber})`)
@@ -191,7 +190,7 @@ function StudentInfoDisplay(props) {
               <div className="input-group-prepend">
                 <span className="input-group-text">Rs.</span>
               </div>
-              <input type="number" autoFocus className="form-control" ref={amountToDepositRef} onFocus={()=>{if(feesDepositCancelRef.current)feesDepositCancelRef.current.scrollIntoView()}} onKeyDown={(e) => { if (e.key === 'Enter') depositFees() }} placeholder='Amount'></input>
+              <input type="number" autoFocus className="form-control" ref={amountToDepositRef} onFocus={() => { if (feesDepositCancelRef.current) feesDepositCancelRef.current.scrollIntoView() }} onKeyDown={(e) => { if (e.key === 'Enter') depositFees() }} placeholder='Amount'></input>
             </div>
 
             <div className="row"><button className="btn btn-success mb-1" onClick={() => depositFees()}>Deposit</button> <button className="btn btn-danger" onClick={() => { setDepositingFees(false) }}>Cancel</button></div><p ref={feesDepositCancelRef}></p>
