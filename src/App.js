@@ -1,44 +1,74 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef ,createContext, useContext} from "react";
 import * as Realm from "realm-web";
+import { Route, Routes } from "react-router-dom";
 import logoIcon from './/images/logoIcon.ico'
 const realmApp = new Realm.App({ id: "application-1-kaqni" });
 
-async function getUser() {
-  const credentials = Realm.Credentials.anonymous();
-  try {
-    const user = await realmApp.logIn(credentials);
-    console.assert(user.id === realmApp.currentUser.id);
-    return user;
-  } catch (err) {
-    console.error("Failed to log in", err);
+const OurContext = createContext(null)
+
+async function getUser(realmUser=null) {
+  if(!realmUser){
+    const credentials = Realm.Credentials.anonymous();
+    try {
+      const user = await realmApp.logIn(credentials);
+      console.assert(user.id === realmApp.currentUser.id);
+      return user;
+    } catch (err) {
+      console.error("Failed to log in", err);
+    }
   }
+  return realmUser;
 }
 
 function App() {
-  let [realmUser, setrealmUser] = useState(realmApp.currentUser);
+  let [realmUser, setRealmUser] = useState(realmApp.currentUser);
   let [data, setData] = useState([]);
-  async function fetchData() {
-    if (!realmUser) { getUser().then(user=>setrealmUser(user)) ;console.log(realmUser)}
-    let students = await realmUser.functions.firstCheck('getStudentsInfo')
-    setData(students);
-  }
-  useEffect(() => { fetchData(); }, []);
+  useEffect(() => { getUser(realmUser).then(user => setRealmUser(user)) }, []);
+  useEffect(() => { realmUser.functions.firstCheck('getStudentsInfo').then((data)=>setData(data)) }, [realmUser]);
   return (
+    <OurContext.Provider value={{data,setData,realmUser,setRealmUser}}>
     <div className="container">
       <Navbar />
-      <CheckDataByAdmin data={data} fetchData={fetchData} realmUser={realmUser} />
-      {/* <ScrollToTopButton /> */}
+      <Routes>
+        <Route path="/" element={<LoginForm />} />
+        <Route path="/admin" element={<CheckDataByAdmin />} />
+        <Route path="/student/:rollNumber" element={<StudentInfoDisplay />} />
+      </Routes>
     </div>
+    </OurContext.Provider>
   );
 }
 
+function LoginForm(){
+  return (
+    <div className="row">
+      <div className="col-12 col-md-6 offset-md-3">
+        <div className="card">
+          <div className="card-body">
+            <h5 className="card-title">Login</h5>
+            <form>
+              <div className="form-group mb-3">
+                <label htmlFor="username">Username</label>
+                <input type="text" className="form-control" id="username" placeholder="Enter username" />
+              </div>
+              <div className="form-group mb-3">
+                <label htmlFor="password">Password</label>
+                <input type="password" className="form-control" id="password" placeholder="Enter password" />
+              </div>
+              <button type="submit" className="btn btn-primary">Submit</button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function CheckDataByAdmin(props) {
+  let {data,realmUser} = useContext(OurContext)
   const classGradeRef = useRef(0);
   const nameRef = useRef("");
   const rollNumberRef = useRef('');
-
-  let data = props.data;
-  let realmUser = props.realmUser
   let classGrades = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
   let [name, setName] = useState("")
   let [classGrade, setClassGrade] = useState(0)
@@ -58,30 +88,30 @@ function CheckDataByAdmin(props) {
         <div className="form-group mb-3">
           <label htmlFor="classGrade">Class</label>
           <select className="form-select" aria-label="Select Class" name="classGrade" ref={classGradeRef} onChange={(e) => setClassGrade(e.target.value)}>
-            {data.length > 0 ? (classGrade == 0 ? <option>Select Class</option> : null) : <option>Loading Data...</option>}
-            {data.length > 0 ? (classGrades.map((grade) => <option key={grade} value={grade}>{grade}</option>)) : null}
+            {data && data.length > 0 ? (classGrade == 0 ? <option>Select Class</option> : null) : <option>Loading Data...</option>}
+            {data && data.length > 0 ? (classGrades.map((grade) => <option key={grade} value={grade}>{grade}</option>)) : null}
           </select>
         </div>
         {classGrade && classGrade > 0 ? <div className="form-group mb-3">
           <label htmlFor="name">Name</label>
           <select className="form-select" aria-label="Select Student" name="name" ref={nameRef} onChange={(e) => setName(e.target.value)}>
-            {data.filter((student) => student.classGrade == classGrade).map((student) => <option key={student.rollNumber} value={student.name}>{student.name}</option>)}
+            {data && data.filter((student) => student.classGrade == classGrade).map((student) => <option key={student.rollNumber} value={student.name}>{student.name}</option>)}
           </select>
         </div> : null}
         {name && name.length > 0 ? <div className="form-group mb-3">
           <label htmlFor="rollNumberAndGuardian">Roll Number and Guardian Name</label>
           <select className="form-select" aria-label="Select Roll Number & Guardian Name" ref={rollNumberRef} name="rollNumberAndGuardian" onChange={e => setRollNumber(e.target.value)}>
-            {filterData().map((student) => <option key={student.rollNumber} value={student.rollNumber}>{student.rollNumber} & {student.fatherName}</option>)}
+            {data && filterData().map((student) => <option key={student.rollNumber} value={student.rollNumber}>{student.rollNumber} & {student.fatherName}</option>)}
           </select>
         </div> : null}
       </form>
-      {(rollNumber && rollNumber != 0) ? <StudentInfoDisplay student={data.find((student) => student.rollNumber == rollNumber)} fetchData={props.fetchData} realmUser={realmUser} /> : null}
+      {rollNumber && rollNumber != 0 ? <StudentInfoDisplay student={data.find((student) => student.rollNumber == rollNumber)}/> : null}
     </>
   );
 }
 
 function StudentInfoDisplay(props) {
-  let realmUser = props.realmUser
+  let {realmUser,setData,data} = useContext(OurContext)
   let student = props.student
   let [moreDetails, setMoreDetails] = useState(false)
   let [depositingFees, setDepositingFees] = useState(false)
@@ -97,11 +127,11 @@ function StudentInfoDisplay(props) {
     if (amountToDepositRef.current.value == 0) return alert('Please enter an amount to deposit')
     let confirmDeposit = window.confirm(`Confirm deposit Rs.${amountToDepositRef.current.value} for ${student.name} (${student.rollNumber})`)
     async function deposit() {
-      let deposited = await realmUser.functions.firstCheck('depositFees', { rollNumber: student.rollNumber, amountToDeposit: amountToDepositRef.current.value, dateOfDeposit: getDate() })
+      let deposited = await realmUser.functions.firstCheck('depositFees', { rollNumber: student.rollNumber, amountToDeposit: Number(amountToDepositRef.current.value), dateOfDeposit: getDate() })
       setDepositingFees(false)
       setUpdatingPhoneNumber(false)
       alert('Fees deposited successfully')
-      props.fetchData()
+      realmUser.functions.firstCheck('getStudentsInfo').then((data) => setData(data))
     }
     if (confirmDeposit) deposit()
   }
@@ -162,7 +192,7 @@ function StudentInfoDisplay(props) {
       setUpdatingPhoneNumber(false)
       setContactNumber('')
       alert('Phone number updated successfully')
-      props.fetchData()
+      realmUser.functions.firstCheck('getStudentsInfo').then((data) => setData(data))
     }
     if (confirmUpdate) update()
   }
