@@ -1,11 +1,11 @@
 {
   "files": {
-    "main.js": "/DR-School/static/js/main.90a3db94.js",
+    "main.js": "/DR-School/static/js/main.291f7afa.js",
     "static/media/logoIcon.ico": "/DR-School/static/media/logoIcon.0576b51b51472c239660.ico",
     "index.html": "/DR-School/index.html",
-    "main.90a3db94.js.map": "/DR-School/static/js/main.90a3db94.js.map"
+    "main.291f7afa.js.map": "/DR-School/static/js/main.291f7afa.js.map"
   },
   "entrypoints": [
-    "static/js/main.90a3db94.js"
+    "static/js/main.291f7afa.js"
   ]
 }

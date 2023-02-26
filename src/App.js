@@ -1,12 +1,13 @@
 import { useEffect, useState, useRef } from "react";
 import * as Realm from "realm-web";
 import logoIcon from './/images/logoIcon.ico'
+const realmApp = new Realm.App({ id: "application-1-kaqni" });
 
 async function getUser() {
-  const app = new Realm.App({ id: "application-1-kaqni" });
   const credentials = Realm.Credentials.anonymous();
   try {
-    const user = await app.logIn(credentials);
+    const user = await realmApp.logIn(credentials);
+    console.assert(user.id === realmApp.currentUser.id);
     return user;
   } catch (err) {
     console.error("Failed to log in", err);
@@ -14,18 +15,18 @@ async function getUser() {
 }
 
 function App() {
-  let [api, setApi] = useState({});
+  let [realmUser, setrealmUser] = useState(realmApp.currentUser);
   let [data, setData] = useState([]);
   async function fetchData() {
-    if (api && Object.keys(api).length === 0) { api = await getUser(); setApi(api);console.log(api) }
-    let students = await api.functions.firstCheck('getStudentsInfo')
+    if (!realmUser) { getUser().then(user=>setrealmUser(user)) ;console.log(realmUser)}
+    let students = await realmUser.functions.firstCheck('getStudentsInfo')
     setData(students);
   }
   useEffect(() => { fetchData(); }, []);
   return (
     <div className="container">
       <Navbar />
-      <CheckDataByAdmin data={data} fetchData={fetchData} api={api} />
+      <CheckDataByAdmin data={data} fetchData={fetchData} realmUser={realmUser} />
       {/* <ScrollToTopButton /> */}
     </div>
   );
@@ -37,7 +38,7 @@ function CheckDataByAdmin(props) {
   const rollNumberRef = useRef('');
 
   let data = props.data;
-  let api = props.api
+  let realmUser = props.realmUser
   let classGrades = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
   let [name, setName] = useState("")
   let [classGrade, setClassGrade] = useState(0)
@@ -74,13 +75,13 @@ function CheckDataByAdmin(props) {
           </select>
         </div> : null}
       </form>
-      {(rollNumber && rollNumber != 0) ? <StudentInfoDisplay student={data.find((student) => student.rollNumber == rollNumber)} fetchData={props.fetchData} api={api} /> : null}
+      {(rollNumber && rollNumber != 0) ? <StudentInfoDisplay student={data.find((student) => student.rollNumber == rollNumber)} fetchData={props.fetchData} realmUser={realmUser} /> : null}
     </>
   );
 }
 
 function StudentInfoDisplay(props) {
-  let api = props.api
+  let realmUser = props.realmUser
   let student = props.student
   let [moreDetails, setMoreDetails] = useState(false)
   let [depositingFees, setDepositingFees] = useState(false)
@@ -96,7 +97,7 @@ function StudentInfoDisplay(props) {
     if (amountToDepositRef.current.value == 0) return alert('Please enter an amount to deposit')
     let confirmDeposit = window.confirm(`Confirm deposit Rs.${amountToDepositRef.current.value} for ${student.name} (${student.rollNumber})`)
     async function deposit() {
-      let deposited = await api.functions.firstCheck('depositFees', { rollNumber: student.rollNumber, amountToDeposit: amountToDepositRef.current.value, dateOfDeposit: getDate() })
+      let deposited = await realmUser.functions.firstCheck('depositFees', { rollNumber: student.rollNumber, amountToDeposit: amountToDepositRef.current.value, dateOfDeposit: getDate() })
       setDepositingFees(false)
       setUpdatingPhoneNumber(false)
       alert('Fees deposited successfully')
@@ -157,7 +158,7 @@ function StudentInfoDisplay(props) {
     if (contactNumber == '') return alert('Please enter a phone number')
     let confirmUpdate = window.confirm(`Confirm phone number ${contactNumber} for ${student.name} (${student.rollNumber})`)
     async function update() {
-      await api.functions.firstCheck('updatePhoneNumber', { rollNumber: student.rollNumber, contactNumber })
+      await realmUser.functions.firstCheck('updatePhoneNumber', { rollNumber: student.rollNumber, contactNumber })
       setUpdatingPhoneNumber(false)
       setContactNumber('')
       alert('Phone number updated successfully')
