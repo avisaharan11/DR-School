@@ -1,27 +1,41 @@
 import { useEffect, useState, useRef, createContext, useContext } from "react";
 import * as Realm from "realm-web";
-import { useRoutes, Link, useNavigate } from "react-router-dom";
+import { useRoutes, Link, useNavigate, useLocation, redirect } from "react-router-dom";
 import logoIcon from './/images/logoIcon.ico'
 
 const OurContext = createContext(null)
+const {
+  BSON: { ObjectId },
+} = Realm;
 
 function App() {
 
   const [client, setClient] = useState(null)
-  const [user, setUser] = useState(null)
   const [app, setApp] = useState(new Realm.App({ id: process.env.REACT_APP_REALM_APP_ID }))
+  const [user, setUser] = useState(app.currentUser)
   const [data, setData] = useState([])
+  const [students, setStudents] = useState([])
   let navigate = useNavigate()
+  let location=useLocation()
+
+  function redirect(){
+    if(location.pathname=='/' && user){
+      navigate('/checkData')
+    }
+    if(location.pathname=='/checkData' && !user){
+      navigate('/')
+    }
+
+  }
 
   useEffect(() => {
-    if (!user) {
-      navigate('/login')
-    }
     if (!client && user) {
       setClient(app.currentUser.mongoClient("mongodb-atlas"))
     }
-
-  }, [user])
+    if(client){
+      client.db('students-data').collection('students-info').find().then((res) => {setData(res)})
+    }
+  }, [user, client])
 
   return (
     <OurContext.Provider value={{
@@ -32,13 +46,15 @@ function App() {
       app,
       setApp,
       data,
-      setData
+      setData,
+      redirect
     }}>
       <div className="container">
         <Navbar />
         {useRoutes([
           { path: '/', element: <Authenticate /> },
           { path: '/checkData', element: <CheckDataByAdmin /> },
+          { path: '/*', element: <Authenticate /> },
         ])}
       </div>
     </OurContext.Provider>
@@ -46,52 +62,103 @@ function App() {
 }
 
 function Authenticate() {
-  let { user, setUser, app } = useContext(OurContext)
-  let navigate = useNavigate()
-  user && navigate('/checkData')
+  let { user, setUser, app, redirect } = useContext(OurContext)
+  redirect()
+  let [loginOrRegisterOrForgotPassword, setLoginOrRegisterOrForgotPassword] = useState('login')
   let [error, setError] = useState('')
-  function login(e) {
+  let handleSubmit = async (e) => {
     e.preventDefault()
     let email = e.target.email.value
     let password = e.target.password.value
-    app.logIn(Realm.Credentials.emailPassword(email, password)).then((user) => {
-      setUser(user)
-      navigate('/checkData')
-    }).catch((error) => {
-      setError(error.error)
-    })
+    let confirmPassword = e.target.confirmPassword ? e.target.confirmPassword.value : null
+    if (loginOrRegisterOrForgotPassword == 'login') {
+      try {
+        let user = await app.logIn(Realm.Credentials.emailPassword(email, password))
+        setUser(user)
+        redirect()
+      } catch (e) {
+        setError(e.error)
+      }
+    }
+    if (loginOrRegisterOrForgotPassword == 'register') {
+      if (password != confirmPassword) return setError('Passwords do not match')
+      try {
+        let user = await app.emailPasswordAuth.registerUser({ email, password })
+        setUser(user)
+        redirect()
+      } catch (e) {
+        setError(e.error)
+      }
+    }
+    if (loginOrRegisterOrForgotPassword == 'forgotPassword') {
+      try {
+        await app.emailPasswordAuth.sendResetPasswordEmail(email)
+        alert('Password reset link sent to your email')
+      } catch (e) {
+        setError(e.error)
+      }
+    }
   }
   return (
-    <div className="row justify-content-center">
-      <div className="col-md-6">
+    <div className="row">
+      <div className="col-md-6 offset-md-3">
         <div className="card">
           <div className="card-body">
-            <h5 className="card-title">Sign In</h5>
-            <form onSubmit={login}>
+            <h1 className="text-center">Login</h1>
+            <form onSubmit={handleSubmit}>
               <div className="form-group mb-3">
-                <label htmlFor="email">Email address</label>
-                <input type="email" className="form-control" id="email" aria-describedby="emailHelp" />
+                <label htmlFor="email">Email</label>
+                <input type="email" className="form-control" name="email" />
               </div>
               <div className="form-group mb-3">
                 <label htmlFor="password">Password</label>
-                <input type="password" className="form-control" id="password" />
+                <input type="password" className="form-control" name="password" />
               </div>
-              <button type="submit" className="btn btn-primary">Submit</button>
+              {loginOrRegisterOrForgotPassword == 'register' ? <div className="form-group mb-3">
+                <label htmlFor="confirmPassword">Confirm Password</label>
+                <input type="password" className="form-control" name="confirmPassword" />
+              </div> : null}
+              <div className="form-group mb-3">
+                <button type="submit" className="btn btn-primary">{loginOrRegisterOrForgotPassword == 'login' ? 'Login' : loginOrRegisterOrForgotPassword == 'register' ? 'Register' : 'Reset Password'}</button>
+              </div>
+              <div className="form-group mb-3">
+
+                {loginOrRegisterOrForgotPassword == 'login' ? <div className="d-flex justify-content-between">
+                  <div>
+                    <Link to="#" onClick={() => setLoginOrRegisterOrForgotPassword('register')}>Register</Link>
+                  </div>
+                  <div>
+                    <Link to="#" onClick={() => setLoginOrRegisterOrForgotPassword('forgotPassword')}>Forgot Password</Link>
+                  </div>
+                </div> : loginOrRegisterOrForgotPassword == 'register' ? <div className="d-flex justify-content-between">
+                  <div>
+                    <Link to="#" onClick={() => setLoginOrRegisterOrForgotPassword('login')}>Login</Link>
+                  </div>
+                  <div>
+                    <Link to="#" onClick={() => setLoginOrRegisterOrForgotPassword('forgotPassword')}>Forgot Password</Link>
+                  </div>
+                </div> : <div className="d-flex justify-content-between">
+                  <div>
+                    <Link to="#" onClick={() => setLoginOrRegisterOrForgotPassword('login')}>Login</Link>
+                  </div>
+                  <div>
+                    <Link to="#" onClick={() => setLoginOrRegisterOrForgotPassword('register')}>Register</Link>
+                  </div>
+                </div>}
+              </div>
+              {error ? <div className="alert alert-danger">{error}</div> : null}
             </form>
-            {error ? <div className="alert alert-danger mt-3" role="alert">
-              {error}
-            </div> : null}
           </div>
         </div>
       </div>
     </div>
   )
-
-
 }
 
 function CheckDataByAdmin(props) {
-  let { data, user } = useContext(OurContext)
+  let { data, user,redirect } = useContext(OurContext)
+  console.log(user)
+  redirect()
   const classGradeRef = useRef(0);
   const nameRef = useRef("");
   const rollNumberRef = useRef('');
@@ -99,7 +166,6 @@ function CheckDataByAdmin(props) {
   let [name, setName] = useState("")
   let [classGrade, setClassGrade] = useState(0)
   let [rollNumber, setRollNumber] = useState(0)
-
   useEffect(() => setName(nameRef.current.value), [classGrade])
   useEffect(() => setRollNumber(rollNumberRef.current.value), [name])
 
@@ -231,7 +297,7 @@ function StudentInfoDisplay(props) {
         <p className="card-text">Guardian Name: {student.fatherName}</p>
         {updatingPhoneNumber ?
           (<div className="card-text">Phone <input type="number" className="form-control" autoFocus ref={contactNumberRef} onChange={(e) => setContactNumber(e.target.value)} placeholder='New Phone Number' onKeyDown={(e) => { if (e.key === 'Enter') updatePhoneNumber() }}></input><div className=" container text-center mt-2"><div className="row"><button type="button" className="btn btn-success mb-1" onClick={() => updatePhoneNumber()}>Save</button><button type="button" className="btn btn-danger mb-3" onClick={() => { setUpdatingPhoneNumber(false); setContactNumber(''); }}>Cancel</button></div></div></div>)
-          : (<p className="card-text">Phone: {student.contactNumbers ? <Link style={{ textDecoration: 'none' }} href={`tel:${student.contactNumbers}`}>&#128222;{student.contactNumbers}</Link> : null}<button type="button" className="btn btn-warning ms-3" onClick={() => setUpdatingPhoneNumber(true)}>Update</button> </p>)}
+          : (<p className="card-text">Phone: {student.contactNumbers ? <a style={{ textDecoration: 'none' }} href={`tel:${student.contactNumbers}`}>&#128222;{student.contactNumbers}</a> : null}<button type="button" className="btn btn-warning ms-3" onClick={() => setUpdatingPhoneNumber(true)}>Update</button> </p>)}
         <p className="card-text">Fees Pending: {Number(student.feesPending2122 ? student.feesPending2122 : 0 + student.feesPending2223 ? student.feesPending2223 : 0) - (student.deposits ? getDepositTotal() : 0)}</p>
         {moreDetails ? (<>
           <p className="card-text">Mother Name: {student.motherName}</p>
@@ -259,6 +325,7 @@ function StudentInfoDisplay(props) {
 }
 
 function Navbar() {
+  let { user,app,setUser } = useContext(OurContext)
   return (
     <nav className="navbar navbar-expand-lg" >
       <div className="container-fluid">
@@ -275,6 +342,9 @@ function Navbar() {
               <Link className="nav-link active" aria-current="page" to="/">Home</Link>
             </li>
           </ul>
+        </div>
+        <div className="d-flex">
+          {user ? <button className="btn btn-outline-danger" onClick={() => {app.currentUser.logOut();setUser(null)}}>Logout</button> : <Link className="btn btn-outline-success" to="/login">Login</Link>}
         </div>
       </div>
     </nav>
