@@ -1,71 +1,97 @@
-import { useEffect, useState, useRef ,createContext, useContext} from "react";
+import { useEffect, useState, useRef, createContext, useContext } from "react";
 import * as Realm from "realm-web";
-import { Route, Routes, Link } from "react-router-dom";
+import { useRoutes, Link, useNavigate } from "react-router-dom";
 import logoIcon from './/images/logoIcon.ico'
-const realmApp = new Realm.App({ id: "application-1-kaqni" });
 
 const OurContext = createContext(null)
 
-async function getUser(realmUser=null) {
-  if(!realmUser){
-    const credentials = Realm.Credentials.anonymous();
-    try {
-      const user = await realmApp.logIn(credentials);
-      console.assert(user.id === realmApp.currentUser.id);
-      return user;
-    } catch (err) {
-      console.error("Failed to log in", err);
-    }
-  }
-  return realmUser;
-}
-
 function App() {
-  let [realmUser, setRealmUser] = useState(realmApp.currentUser);
-  let [data, setData] = useState([]);
-  useEffect(() => { getUser(realmUser).then(user => setRealmUser(user)) }, []);
-  useEffect(() => { realmUser.functions.firstCheck('getStudentsInfo').then((data)=>setData(data)) }, [realmUser]);
+
+  const [client, setClient] = useState(null)
+  const [user, setUser] = useState(null)
+  const [app, setApp] = useState(new Realm.App({ id: process.env.REACT_APP_REALM_APP_ID }))
+  const [data, setData] = useState([])
+  let navigate = useNavigate()
+
+  useEffect(() => {
+    if (!user) {
+      navigate('/login')
+    }
+    if (!client && user) {
+      setClient(app.currentUser.mongoClient("mongodb-atlas"))
+    }
+
+  }, [user])
+
   return (
-    <OurContext.Provider value={{data,setData,realmUser,setRealmUser}}>
-    <div className="container">
-      <Navbar />
-      <Routes>
-        <Route path="/" element={<LoginForm />} />
-        <Route path="/admin" element={<CheckDataByAdmin />} />
-        <Route path="/student/:rollNumber" element={<StudentInfoDisplay />} />
-      </Routes>
-    </div>
+    <OurContext.Provider value={{
+      client,
+      setClient,
+      user,
+      setUser,
+      app,
+      setApp,
+      data,
+      setData
+    }}>
+      <div className="container">
+        <Navbar />
+        {useRoutes([
+          { path: '/', element: <Authenticate /> },
+          { path: '/checkData', element: <CheckDataByAdmin /> },
+        ])}
+      </div>
     </OurContext.Provider>
   );
 }
 
-function LoginForm(){
+function Authenticate() {
+  let { user, setUser, app } = useContext(OurContext)
+  let navigate = useNavigate()
+  user && navigate('/checkData')
+  let [error, setError] = useState('')
+  function login(e) {
+    e.preventDefault()
+    let email = e.target.email.value
+    let password = e.target.password.value
+    app.logIn(Realm.Credentials.emailPassword(email, password)).then((user) => {
+      setUser(user)
+      navigate('/checkData')
+    }).catch((error) => {
+      setError(error.error)
+    })
+  }
   return (
-    <div className="row">
-      <div className="col-12 col-md-6 offset-md-3">
+    <div className="row justify-content-center">
+      <div className="col-md-6">
         <div className="card">
           <div className="card-body">
-            <h5 className="card-title">Login</h5>
-            <form>
+            <h5 className="card-title">Sign In</h5>
+            <form onSubmit={login}>
               <div className="form-group mb-3">
-                <label htmlFor="username">Username</label>
-                <input type="text" className="form-control" id="username" placeholder="Enter username" />
+                <label htmlFor="email">Email address</label>
+                <input type="email" className="form-control" id="email" aria-describedby="emailHelp" />
               </div>
               <div className="form-group mb-3">
                 <label htmlFor="password">Password</label>
-                <input type="password" className="form-control" id="password" placeholder="Enter password" />
+                <input type="password" className="form-control" id="password" />
               </div>
               <button type="submit" className="btn btn-primary">Submit</button>
             </form>
+            {error ? <div className="alert alert-danger mt-3" role="alert">
+              {error}
+            </div> : null}
           </div>
         </div>
       </div>
     </div>
   )
+
+
 }
 
 function CheckDataByAdmin(props) {
-  let {data,realmUser} = useContext(OurContext)
+  let { data, user } = useContext(OurContext)
   const classGradeRef = useRef(0);
   const nameRef = useRef("");
   const rollNumberRef = useRef('');
@@ -105,13 +131,13 @@ function CheckDataByAdmin(props) {
           </select>
         </div> : null}
       </form>
-      {rollNumber && rollNumber != 0 ? <StudentInfoDisplay student={data.find((student) => student.rollNumber == rollNumber)}/> : null}
+      {rollNumber && rollNumber != 0 ? <StudentInfoDisplay student={data.find((student) => student.rollNumber == rollNumber)} /> : null}
     </>
   );
 }
 
 function StudentInfoDisplay(props) {
-  let {realmUser,setData,data} = useContext(OurContext)
+  let { user, setData, data } = useContext(OurContext)
   let student = props.student
   let [moreDetails, setMoreDetails] = useState(false)
   let [depositingFees, setDepositingFees] = useState(false)
@@ -127,11 +153,11 @@ function StudentInfoDisplay(props) {
     if (amountToDepositRef.current.value == 0) return alert('Please enter an amount to deposit')
     let confirmDeposit = window.confirm(`Confirm deposit Rs.${amountToDepositRef.current.value} for ${student.name} (${student.rollNumber})`)
     async function deposit() {
-      let deposited = await realmUser.functions.firstCheck('depositFees', { rollNumber: student.rollNumber, amountToDeposit: Number(amountToDepositRef.current.value), dateOfDeposit: getDate() })
+      let deposited = await user.functions.firstCheck('depositFees', { rollNumber: student.rollNumber, amountToDeposit: Number(amountToDepositRef.current.value), dateOfDeposit: getDate() })
       setDepositingFees(false)
       setUpdatingPhoneNumber(false)
       alert('Fees deposited successfully')
-      realmUser.functions.firstCheck('getStudentsInfo').then((data) => setData(data))
+      user.functions.firstCheck('getStudentsInfo').then((data) => setData(data))
     }
     if (confirmDeposit) deposit()
   }
@@ -188,11 +214,11 @@ function StudentInfoDisplay(props) {
     if (contactNumber == '') return alert('Please enter a phone number')
     let confirmUpdate = window.confirm(`Confirm phone number ${contactNumber} for ${student.name} (${student.rollNumber})`)
     async function update() {
-      await realmUser.functions.firstCheck('updatePhoneNumber', { rollNumber: student.rollNumber, contactNumber })
+      await user.functions.firstCheck('updatePhoneNumber', { rollNumber: student.rollNumber, contactNumber })
       setUpdatingPhoneNumber(false)
       setContactNumber('')
       alert('Phone number updated successfully')
-      realmUser.functions.firstCheck('getStudentsInfo').then((data) => setData(data))
+      user.functions.firstCheck('getStudentsInfo').then((data) => setData(data))
     }
     if (confirmUpdate) update()
   }
@@ -235,23 +261,23 @@ function StudentInfoDisplay(props) {
 function Navbar() {
   return (
     <nav className="navbar navbar-expand-lg" >
-    <div className="container-fluid">
-    <Link className="navbar-brand" to="/">
-        <img src={logoIcon} width="30" height="30" className="d-inline-block align-top" alt=""></img>
-        DR School - Info
-      </Link>
-      <button className="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
-        <span className="navbar-toggler-icon"></span>
-      </button>
-      <div className="collapse navbar-collapse" id="navbarSupportedContent">
-        <ul className="navbar-nav me-auto mb-2 mb-lg-0">
-          <li className="nav-item">
-            <Link className="nav-link active" aria-current="page" to="/">Home</Link>
-          </li>
-        </ul>
+      <div className="container-fluid">
+        <Link className="navbar-brand" to="/">
+          <img src={logoIcon} width="30" height="30" className="d-inline-block align-top" alt=""></img>
+          DR School - Info
+        </Link>
+        <button className="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+          <span className="navbar-toggler-icon"></span>
+        </button>
+        <div className="collapse navbar-collapse" id="navbarSupportedContent">
+          <ul className="navbar-nav me-auto mb-2 mb-lg-0">
+            <li className="nav-item">
+              <Link className="nav-link active" aria-current="page" to="/">Home</Link>
+            </li>
+          </ul>
+        </div>
       </div>
-    </div>
-  </nav>
+    </nav>
   )
 }
 
