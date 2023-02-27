@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef ,createContext, useContext} from "react";
 import * as Realm from "realm-web";
-import { Route, Routes } from "react-router-dom";
+import { Route, Routes, Link } from "react-router-dom";
 import logoIcon from './/images/logoIcon.ico'
 const realmApp = new Realm.App({ id: "application-1-kaqni" });
 
@@ -205,7 +205,7 @@ function StudentInfoDisplay(props) {
         <p className="card-text">Guardian Name: {student.fatherName}</p>
         {updatingPhoneNumber ?
           (<div className="card-text">Phone <input type="number" className="form-control" autoFocus ref={contactNumberRef} onChange={(e) => setContactNumber(e.target.value)} placeholder='New Phone Number' onKeyDown={(e) => { if (e.key === 'Enter') updatePhoneNumber() }}></input><div className=" container text-center mt-2"><div className="row"><button type="button" className="btn btn-success mb-1" onClick={() => updatePhoneNumber()}>Save</button><button type="button" className="btn btn-danger mb-3" onClick={() => { setUpdatingPhoneNumber(false); setContactNumber(''); }}>Cancel</button></div></div></div>)
-          : (<p className="card-text">Phone: {student.contactNumbers ? <a style={{ textDecoration: 'none' }} href={`tel:${student.contactNumbers}`}>&#128222;{student.contactNumbers}</a> : null}<button type="button" className="btn btn-warning ms-3" onClick={() => setUpdatingPhoneNumber(true)}>Update</button> </p>)}
+          : (<p className="card-text">Phone: {student.contactNumbers ? <Link style={{ textDecoration: 'none' }} href={`tel:${student.contactNumbers}`}>&#128222;{student.contactNumbers}</Link> : null}<button type="button" className="btn btn-warning ms-3" onClick={() => setUpdatingPhoneNumber(true)}>Update</button> </p>)}
         <p className="card-text">Fees Pending: {Number(student.feesPending2122 ? student.feesPending2122 : 0 + student.feesPending2223 ? student.feesPending2223 : 0) - (student.deposits ? getDepositTotal() : 0)}</p>
         {moreDetails ? (<>
           <p className="card-text">Mother Name: {student.motherName}</p>
@@ -234,12 +234,24 @@ function StudentInfoDisplay(props) {
 
 function Navbar() {
   return (
-    <nav className="navbar sticky-top" style={{ backgroundColor: 'white' }} >
-      <a className="navbar-brand" href="#">
+    <nav className="navbar navbar-expand-lg" >
+    <div className="container-fluid">
+    <Link className="navbar-brand" to="/">
         <img src={logoIcon} width="30" height="30" className="d-inline-block align-top" alt=""></img>
         DR School - Info
-      </a>
-    </nav>
+      </Link>
+      <button className="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+        <span className="navbar-toggler-icon"></span>
+      </button>
+      <div className="collapse navbar-collapse" id="navbarSupportedContent">
+        <ul className="navbar-nav me-auto mb-2 mb-lg-0">
+          <li className="nav-item">
+            <Link className="nav-link active" aria-current="page" to="/">Home</Link>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </nav>
   )
 }
 
