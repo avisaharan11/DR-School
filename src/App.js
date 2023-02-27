@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef, createContext, useContext,useMemo } from "react";
 import * as Realm from "realm-web";
-import { useRoutes, Link, useNavigate, useLocation, redirect } from "react-router-dom";
+import { useRoutes, Link, Navigate, useLocation } from "react-router-dom";
 import logoIcon from './/images/logoIcon.ico'
 
 const OurContext = createContext(null)
@@ -14,26 +14,10 @@ const {
 } = Realm;
 
 function App() {
-
   const [client, setClient] = useState(null)
   const [app, setApp] = useState(new Realm.App({ id: process.env.REACT_APP_REALM_APP_ID }))
   const [user, setUser] = useState(app.currentUser)
   const [data, setData] = useState([])
-  const [students, setStudents] = useState([])
-  let navigate = useNavigate()
-  let location=useLocation()
-  function setNewStudentsData(){
-    user && user.type=='admin' && client.db('students-data').collection('students-info').find().then((res) => {setStudents(res)}) 
-  }
-  function redirect(){
-    if(location.pathname=='/' && user && user.state=='LoggedIn'){
-      navigate('/checkData')
-    }
-    if(location.pathname=='/checkData' && (!user || user.state!='LoggedIn')){
-      navigate('/')
-    }
-
-  }
 
   useEffect(() => {
     if (!client && user) {
@@ -53,25 +37,19 @@ function App() {
       app,
       setApp,
       data,
-      setData,
-      redirect
+      setData
     }}>
       <div className="container">
         <Navbar />
-        {useRoutes([
-          { path: '/', element: <Authenticate /> },
-          { path: '/checkData', element: <CheckDataByAdmin /> },
-          { path: '/confirmUser', element: <Authenticate/>},
-          { path: '/*', element: <Authenticate /> },
-        ])}
+        {user && user.isLoggedIn ? <CheckDataByAdmin /> : <Authenticate />}
       </div>
     </OurContext.Provider>
   );
 }
+
 function Authenticate() {
-  let {setUser, app, redirect } = useContext(OurContext)
+  let {setUser, app} = useContext(OurContext)
   let [type, setType] = useState('login')
-  redirect()
   let [error, setError] = useState('')
   let query=useQuery()
   let token=query.get('token')
@@ -91,7 +69,6 @@ function Authenticate() {
         let user = await app.logIn(Realm.Credentials.emailPassword(email, password))
         console.log("user: ", user)
         user && setUser(user)
-        redirect()
       } catch (e) {
         setTimeout(() => {
           setError('')
@@ -104,7 +81,6 @@ function Authenticate() {
       try {
         setError('Loading...')
         let user = await app.emailPasswordAuth.registerUser({ email, password, userId:"avi" })
-        redirect()
         setError("Please confirm your email to login")
       } catch (e) {
         setTimeout(() => {
@@ -183,10 +159,9 @@ function Authenticate() {
 }
 
 function CheckDataByAdmin() {
-  let { data, user,redirect } = useContext(OurContext)
+  let { data, user } = useContext(OurContext)
   const classGradeRef = useRef(0);
   const nameRef = useRef("");
-  redirect()
   const rollNumberRef = useRef('');
   let classGrades = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
   let [name, setName] = useState("")
