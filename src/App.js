@@ -1,9 +1,14 @@
-import { useEffect, useState, useRef, createContext, useContext } from "react";
+import { useEffect, useState, useRef, createContext, useContext,useMemo } from "react";
 import * as Realm from "realm-web";
 import { useRoutes, Link, useNavigate, useLocation, redirect } from "react-router-dom";
 import logoIcon from './/images/logoIcon.ico'
 
 const OurContext = createContext(null)
+function useQuery() {
+  const { search } = useLocation();
+
+  return useMemo(() => new URLSearchParams(search), [search]);
+}
 const {
   BSON: { ObjectId },
 } = Realm;
@@ -17,12 +22,14 @@ function App() {
   const [students, setStudents] = useState([])
   let navigate = useNavigate()
   let location=useLocation()
-
+  function setNewStudentsData(){
+    user && user.type=='admin' && client.db('students-data').collection('students-info').find().then((res) => {setStudents(res)}) 
+  }
   function redirect(){
-    if(location.pathname=='/' && user){
+    if(location.pathname=='/' && user && user.state=='LoggedIn'){
       navigate('/checkData')
     }
-    if(location.pathname=='/checkData' && !user){
+    if(location.pathname=='/checkData' && (!user || user.state!='LoggedIn')){
       navigate('/')
     }
 
@@ -54,47 +61,66 @@ function App() {
         {useRoutes([
           { path: '/', element: <Authenticate /> },
           { path: '/checkData', element: <CheckDataByAdmin /> },
+          { path: '/confirmUser', element: <Authenticate/>},
           { path: '/*', element: <Authenticate /> },
         ])}
       </div>
     </OurContext.Provider>
   );
 }
-
 function Authenticate() {
-  let { user, setUser, app, redirect } = useContext(OurContext)
+  let {setUser, app, redirect } = useContext(OurContext)
+  let [type, setType] = useState('login')
   redirect()
-  let [loginOrRegisterOrForgotPassword, setLoginOrRegisterOrForgotPassword] = useState('login')
   let [error, setError] = useState('')
+  let query=useQuery()
+  let token=query.get('token')
+  let tokenId=query.get('tokenId')
+  if(token && tokenId){
+    let user = app.emailPasswordAuth.confirmUser({token, tokenId}).then(() => {
+      setError("confirmed")
+    })
+  }
   let handleSubmit = async (e) => {
     e.preventDefault()
     let email = e.target.email.value
     let password = e.target.password.value
     let confirmPassword = e.target.confirmPassword ? e.target.confirmPassword.value : null
-    if (loginOrRegisterOrForgotPassword == 'login') {
+    if (type == 'login') {
       try {
         let user = await app.logIn(Realm.Credentials.emailPassword(email, password))
-        setUser(user)
+        console.log("user: ", user)
+        user && setUser(user)
         redirect()
       } catch (e) {
+        setTimeout(() => {
+          setError('')
+        }, 3000)
         setError(e.error)
       }
     }
-    if (loginOrRegisterOrForgotPassword == 'register') {
+    if (type == 'register') {
       if (password != confirmPassword) return setError('Passwords do not match')
       try {
-        let user = await app.emailPasswordAuth.registerUser({ email, password })
-        setUser(user)
+        setError('Loading...')
+        let user = await app.emailPasswordAuth.registerUser({ email, password, userId:"avi" })
         redirect()
+        setError("Please confirm your email to login")
       } catch (e) {
+        setTimeout(() => {
+          setError('')
+        }, 3000)
         setError(e.error)
       }
     }
-    if (loginOrRegisterOrForgotPassword == 'forgotPassword') {
+    if (type == 'forgotPassword') {
       try {
         await app.emailPasswordAuth.sendResetPasswordEmail(email)
         alert('Password reset link sent to your email')
       } catch (e) {
+        setTimeout(() => {
+          setError('')
+        }, 3000)
         setError(e.error)
       }
     }
@@ -114,39 +140,40 @@ function Authenticate() {
                 <label htmlFor="password">Password</label>
                 <input type="password" className="form-control" name="password" />
               </div>
-              {loginOrRegisterOrForgotPassword == 'register' ? <div className="form-group mb-3">
+              {type == 'register' ? <div className="form-group mb-3">
                 <label htmlFor="confirmPassword">Confirm Password</label>
                 <input type="password" className="form-control" name="confirmPassword" />
               </div> : null}
               <div className="form-group mb-3">
-                <button type="submit" className="btn btn-primary">{loginOrRegisterOrForgotPassword == 'login' ? 'Login' : loginOrRegisterOrForgotPassword == 'register' ? 'Register' : 'Reset Password'}</button>
+                <button type="submit" className="btn btn-primary">{type == 'login' ? 'Login' : type == 'register' ? 'Register' : 'Reset Password'}</button>
               </div>
               <div className="form-group mb-3">
 
-                {loginOrRegisterOrForgotPassword == 'login' ? <div className="d-flex justify-content-between">
+                {type == 'login' ? <div className="d-flex justify-content-between">
                   <div>
-                    <Link to="#" onClick={() => setLoginOrRegisterOrForgotPassword('register')}>Register</Link>
+                    <Link to="#" onClick={() => setType('register')}>Register</Link>
                   </div>
                   <div>
-                    <Link to="#" onClick={() => setLoginOrRegisterOrForgotPassword('forgotPassword')}>Forgot Password</Link>
+                    <Link to="#" onClick={() => setType('forgotPassword')}>Forgot Password</Link>
                   </div>
-                </div> : loginOrRegisterOrForgotPassword == 'register' ? <div className="d-flex justify-content-between">
+                </div> : type == 'register' ? <div className="d-flex justify-content-between">
                   <div>
-                    <Link to="#" onClick={() => setLoginOrRegisterOrForgotPassword('login')}>Login</Link>
+                    <Link to="#" onClick={() => setType('login')}>Login</Link>
                   </div>
                   <div>
-                    <Link to="#" onClick={() => setLoginOrRegisterOrForgotPassword('forgotPassword')}>Forgot Password</Link>
+                    <Link to="#" onClick={() => setType('forgotPassword')}>Forgot Password</Link>
                   </div>
                 </div> : <div className="d-flex justify-content-between">
                   <div>
-                    <Link to="#" onClick={() => setLoginOrRegisterOrForgotPassword('login')}>Login</Link>
+                    <Link to="#" onClick={() => setType('login')}>Login</Link>
                   </div>
                   <div>
-                    <Link to="#" onClick={() => setLoginOrRegisterOrForgotPassword('register')}>Register</Link>
+                    <Link to="#" onClick={() => setType('register')}>Register</Link>
                   </div>
                 </div>}
               </div>
-              {error ? <div className="alert alert-danger">{error}</div> : null}
+              {error && error!='confirmed'? <div className="alert alert-danger">{error}</div> : null}
+              {error=='confirmed'? <div className="alert alert-success">Email Confimed! Please sign in to continue</div> : null}
             </form>
           </div>
         </div>
@@ -155,12 +182,11 @@ function Authenticate() {
   )
 }
 
-function CheckDataByAdmin(props) {
+function CheckDataByAdmin() {
   let { data, user,redirect } = useContext(OurContext)
-  console.log(user)
-  redirect()
   const classGradeRef = useRef(0);
   const nameRef = useRef("");
+  redirect()
   const rollNumberRef = useRef('');
   let classGrades = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
   let [name, setName] = useState("")
@@ -344,7 +370,7 @@ function Navbar() {
           </ul>
         </div>
         <div className="d-flex">
-          {user ? <button className="btn btn-outline-danger" onClick={() => {app.currentUser.logOut();setUser(null)}}>Logout</button> : <Link className="btn btn-outline-success" to="/login">Login</Link>}
+          {user ? <button className="btn btn-outline-danger" onClick={() => {app.currentUser.logOut();setUser(null)}}>Logout</button> : <Link className="btn btn-outline-success" to="/" >Login</Link>}
         </div>
       </div>
     </nav>
