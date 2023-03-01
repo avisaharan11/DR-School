@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, createContext, useContext,useMemo } from "react";
+import { useEffect, useState, useRef, createContext, useContext, useMemo } from "react";
 import * as Realm from "realm-web";
 import { useRoutes, Link, Navigate, useLocation } from "react-router-dom";
 import logoIcon from './/images/logoIcon.ico'
@@ -19,25 +19,26 @@ function App() {
   const [user, setUser] = useState(app.currentUser)
   const [data, setData] = useState([])
 
+  function updateData() {
+    client.db('school').collection('students').find().then((res) => { setData(res) }).catch((e) => { console.log(e) })
+  }
   useEffect(() => {
     if (!client && user) {
       setClient(app.currentUser.mongoClient("mongodb-atlas"))
     }
-    if(client){
-      client.db('students-data').collection('students-info').find().then((res) => {setData(res)})
+    if (client) {
+      updateData()
     }
   }, [user, client])
 
   return (
     <OurContext.Provider value={{
       client,
-      setClient,
       user,
       setUser,
       app,
-      setApp,
       data,
-      setData
+      updateData
     }}>
       <div className="container">
         <Navbar />
@@ -48,16 +49,25 @@ function App() {
 }
 
 function Authenticate() {
-  let {setUser, app} = useContext(OurContext)
+  let { setUser, app } = useContext(OurContext)
   let [type, setType] = useState('login')
   let [error, setError] = useState('')
-  let query=useQuery()
-  let token=query.get('token')
-  let tokenId=query.get('tokenId')
-  if(token && tokenId){
-    let user = app.emailPasswordAuth.confirmUser({token, tokenId}).then(() => {
-      setError("confirmed")
-    })
+  let thisEmail = useRef()
+  let query = useQuery()
+  useEffect(() => { confirmUser() }, [])
+  function confirmUser() {
+    let token = query.get('token')
+    let tokenId = query.get('tokenId')
+    if (token && tokenId) {
+      app.emailPasswordAuth.confirmUser({ token, tokenId }).then((user) => {
+        setError({ text: "Email Confimed! Please sign in to continue", type: "success" })
+        console.log('Confimed user', user);
+      }).catch((e) => { setError({ text: e.error, type: "danger" }) })
+    }
+  }
+  function resendConfirmationEmail(email) {
+    setError({ text: 'Sending Email...', type: "info" })
+    app.emailPasswordAuth.resendConfirmationEmail({ email }).then((user) => { setError({ text: 'Email sent! Please check your inbox', type: "success" }) }).catch((e) => { setError({ text: e.error, type: "danger" }) })
   }
   let handleSubmit = async (e) => {
     e.preventDefault()
@@ -65,40 +75,37 @@ function Authenticate() {
     let password = e.target.password.value
     let confirmPassword = e.target.confirmPassword ? e.target.confirmPassword.value : null
     if (type == 'login') {
-      try {
-        let user = await app.logIn(Realm.Credentials.emailPassword(email, password))
-        console.log("user: ", user)
-        user && setUser(user)
-      } catch (e) {
-        setTimeout(() => {
-          setError('')
-        }, 3000)
-        setError(e.error)
-      }
+      setError({ text: 'Loading...', type: "info" })
+      app.logIn(Realm.Credentials.emailPassword(email, password)).then((user) => setUser(user)).catch((e) => { setError({ text: e.error, type: "danger" }); })
     }
     if (type == 'register') {
-      if (password != confirmPassword) return setError('Passwords do not match')
-      try {
-        setError('Loading...')
-        let user = await app.emailPasswordAuth.registerUser({ email, password, userId:"avi" })
-        setError("Please confirm your email to login")
-      } catch (e) {
+      if (password != confirmPassword) {
+        setError({ text: 'Passwords do not match', type: 'danger' })
         setTimeout(() => {
           setError('')
         }, 3000)
-        setError(e.error)
+        return
       }
+      setError({ text: 'Loading...', type: "success" })
+      app.emailPasswordAuth.registerUser({ email, password }).then(() => { setError({ text: 'Email sent! Please confirm your email to continue', type: "success" }) }).catch((e) => {
+        if (e.error == 'name already in use') {
+          setError({ text: 'Email already in use, please login', type: "danger" })
+        }
+      })
     }
     if (type == 'forgotPassword') {
-      try {
-        await app.emailPasswordAuth.sendResetPasswordEmail(email)
-        alert('Password reset link sent to your email')
-      } catch (e) {
-        setTimeout(() => {
-          setError('')
-        }, 3000)
-        setError(e.error)
-      }
+      app.emailPasswordAuth.sendResetPasswordEmail(thisEmail.current.value).then(() => { setError({ text: 'Email sent! Please check your email to continue', type: "success" }) }).catch((e) => { setError({ text: e.error, type: "danger" }) })
+    }
+  }
+  function showError() {
+    if (error) {
+      return (
+        <div className={`alert alert-dismissible alert-${error.type}`}>
+          <button type="button" className="btn-close" data-bs-dismiss="alert"></button>
+          <strong>{error.text}</strong>
+          {error.text == 'confirmation required' ? <a className="btn btn-link" onClick={() => { resendConfirmationEmail(thisEmail.current.value) }}>Resend Confirmation Email</a> : null}
+        </div>
+      )
     }
   }
   return (
@@ -110,7 +117,7 @@ function Authenticate() {
             <form onSubmit={handleSubmit}>
               <div className="form-group mb-3">
                 <label htmlFor="email">Email</label>
-                <input type="email" className="form-control" name="email" />
+                <input type="email" className="form-control" name="email" ref={thisEmail} />
               </div>
               <div className="form-group mb-3">
                 <label htmlFor="password">Password</label>
@@ -148,8 +155,7 @@ function Authenticate() {
                   </div>
                 </div>}
               </div>
-              {error && error!='confirmed'? <div className="alert alert-danger">{error}</div> : null}
-              {error=='confirmed'? <div className="alert alert-success">Email Confimed! Please sign in to continue</div> : null}
+              {showError()}
             </form>
           </div>
         </div>
@@ -163,7 +169,7 @@ function CheckDataByAdmin() {
   const classGradeRef = useRef(0);
   const nameRef = useRef("");
   const rollNumberRef = useRef('');
-  let classGrades = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+  let classGrades = ['Nursery', 'KG', 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
   let [name, setName] = useState("")
   let [classGrade, setClassGrade] = useState(0)
   let [rollNumber, setRollNumber] = useState(0)
@@ -198,33 +204,30 @@ function CheckDataByAdmin() {
           </select>
         </div> : null}
       </form>
-      {rollNumber && rollNumber != 0 ? <StudentInfoDisplay student={data.find((student) => student.rollNumber == rollNumber)} /> : null}
+      {rollNumber && rollNumber != 0 && <StudentInfoDisplay student={data.find((student) => student.rollNumber == rollNumber)} />}
     </>
   );
 }
 
-function StudentInfoDisplay(props) {
-  let { user, setData, data } = useContext(OurContext)
-  let student = props.student
+function StudentInfoDisplay({ student }) {
+  let { user, updateData, data, client } = useContext(OurContext)
   let [moreDetails, setMoreDetails] = useState(false)
   let [depositingFees, setDepositingFees] = useState(false)
-  let [updatingPhoneNumber, setUpdatingPhoneNumber] = useState(false)
+  let [updatingContactNumber, setUpdatingContactNumber] = useState(false)
+  let collection = client.db('school').collection('students')
   let [contactNumber, setContactNumber] = useState('')
-  let contactNumberRef = useRef('')
   let amountToDepositRef = useRef(0)
   let feesDepositCancelRef = useRef('')
-  useEffect(() => { setUpdatingPhoneNumber(false); setContactNumber('') }, [student.contactNumbers])
-  useEffect(() => { setUpdatingPhoneNumber(false); setDepositingFees(false) }, [student.rollNumber])
+  useEffect(() => { setDepositingFees(false) }, [student.rollNumber])
   useEffect(() => { if (depositingFees) feesDepositCancelRef.current.scrollIntoView() }, [depositingFees])
   function depositFees() {
     if (amountToDepositRef.current.value == 0) return alert('Please enter an amount to deposit')
     let confirmDeposit = window.confirm(`Confirm deposit Rs.${amountToDepositRef.current.value} for ${student.name} (${student.rollNumber})`)
     async function deposit() {
-      let deposited = await user.functions.firstCheck('depositFees', { rollNumber: student.rollNumber, amountToDeposit: Number(amountToDepositRef.current.value), dateOfDeposit: getDate() })
-      setDepositingFees(false)
-      setUpdatingPhoneNumber(false)
-      alert('Fees deposited successfully')
-      user.functions.firstCheck('getStudentsInfo').then((data) => setData(data))
+      collection.updateOne(
+        { rollNumber: student.rollNumber },
+        { $push: { deposits: { amount: Number(amountToDepositRef.current.value), date: getDate() } } }
+      ).then(() => { setDepositingFees(false); setUpdatingContactNumber(false); alert('Fees deposited successfully'); updateData() }).catch((err) => alert(err))
     }
     if (confirmDeposit) deposit()
   }
@@ -252,7 +255,7 @@ function StudentInfoDisplay(props) {
       let transactions = []
       if (student.deposits) {
         for (let i = 0; i < student.deposits.length; i++) {
-          transactions.push(student.deposits[i][0])
+          transactions.push(student.deposits[i].amount)
         }
       }
       return transactions.reduce((partialSum, a) => Number(partialSum) + Number(a), 0)
@@ -270,35 +273,107 @@ function StudentInfoDisplay(props) {
             </tr>
           </thead>
           <tbody>
-            {student.deposits.map((deposit, key) => <tr key={key}><td>{deposit[1]}</td><td>{deposit[0]}</td></tr>)}
+            {student.deposits.map((deposit, key) => <tr key={key}><td>{deposit.date}</td><td>{deposit.amount}</td></tr>)}
             {student.deposits.length > 1 ? <tr className="table-dark"><td>Total Deposits</td><td>{getTransactionTotal()}</td></tr> : null}
           </tbody>
         </table>
       </>
     )
   }
-  function updatePhoneNumber() {
-    if (contactNumber == '') return alert('Please enter a phone number')
-    let confirmUpdate = window.confirm(`Confirm phone number ${contactNumber} for ${student.name} (${student.rollNumber})`)
-    async function update() {
-      await user.functions.firstCheck('updatePhoneNumber', { rollNumber: student.rollNumber, contactNumber })
-      setUpdatingPhoneNumber(false)
-      setContactNumber('')
-      alert('Phone number updated successfully')
-      user.functions.firstCheck('getStudentsInfo').then((data) => setData(data))
+  //add contact number to database
+  function addContactNumber() {
+    if (contactNumber.length == 0) return alert('Please enter a contact number')
+    let confirmAddContactNumber = window.confirm(`Confirm adding ${contactNumber} for ${student.name} (${student.rollNumber})`)
+    async function addContactNumber() {
+      collection.updateOne(
+        { rollNumber: student.rollNumber },
+        { $push: { contactNumbers: contactNumber } }
+      ).then(() => { setUpdatingContactNumber(false); setDepositingFees(false); alert('Contact Number added successfully'); setContactNumber(''); updateData() }).catch((err) => alert(err))
     }
-    if (confirmUpdate) update()
+    if (confirmAddContactNumber) addContactNumber()
   }
+  //update contact number in database
+  function updateContactNumber(oldContactNumber, newContactNumber) {
+    if (contactNumber.length == 0) return alert('Please enter a contact number')
+    let confirmUpdateContactNumber = window.confirm(`Confirm updating ${contactNumber} for ${student.name} (${student.rollNumber})`)
+    async function update() {
+      function updateArrayItem(arr = student.contactNumbers) {
+        const index = arr.indexOf(oldContactNumber); // Get the index of the item to delete
+        if (index !== -1) {
+          arr.splice(index, 1, newContactNumber); // Delete the item and insert the new item
+        }
+        return arr;
+      }
+      collection.updateOne(
+        { rollNumber: student.rollNumber },
+        { $set: { contactNumbers: updateArrayItem() } }
+      ).then(() => { setUpdatingContactNumber(false); setDepositingFees(false); alert('Contact Number updated successfully'); updateData() }).catch((err) => alert(err))
+    }
+    if (confirmUpdateContactNumber) update()
+  }
+  //remove contact number from database
+  function removeContactNumber(contactNumberToRemove) {
+    if (contactNumber.length == 0) return alert('Please enter a contact number')
+    let confirmRemoveContactNumber = window.confirm(`Confirm removing ${contactNumber} for ${student.name} (${student.rollNumber})`)
+    async function remove() {
+      function removeItemFromArray(arr = student.contactNumbers, item = contactNumberToRemove) {
+        const index = arr.indexOf(item); // Get the index of the item to remove
+        if (index !== -1) {
+          arr.splice(index, 1); // Remove the item
+        }
+        return arr;
+      }
 
+      collection.updateOne(
+        { rollNumber: student.rollNumber },
+        { $set: { contactNumbers: removeItemFromArray() } }
+      ).then(() => { setUpdatingContactNumber(false); setDepositingFees(false); alert('Contact Number removed successfully'); updateData() }).catch((err) => alert(err))
+    }
+    if (confirmRemoveContactNumber) remove()
+  }
+  //display contact numbers with telephone anchor tags, with update and remove icons. When clicked on update icon, it will turn that contact number space into input box to update contact number, with an update button, which when clicked will call updateContactNumber function with contact number that is being updated and new contact number in input field as arguments. When clicked on remove icon, it will call removeContactNumber function to remove that specific contact number from database. If no contact number is present, it will show button to add contact number, which when clicked will show an input box and add button to call addContactNumber function with contact number in input field as argument 
+  function contactNumbersSpace() {
+    if (!student.contactNumbers || student.contactNumbers.length == 0) {
+      return (
+        <>
+          {updatingContactNumber ? (
+            <>
+              <input type="text" className="form-control" placeholder="Enter Contact Number" value={contactNumber} onChange={(e) => setContactNumber(e.target.value)} />
+              <button className="btn btn-success mt-2" onClick={addContactNumber}>Add</button>
+            </>
+          ) : (
+            <button className="btn btn-success" onClick={() => setUpdatingContactNumber(true)}>Add Contact Number</button>
+          )}
+        </>
+      )
+    }
+    return (
+      <>
+        {student.contactNumbers.map((contactNumber, key) => (
+          <div key={key}>
+            <a href={`tel:${contactNumber}`} className="card-link">{contactNumber}</a>
+            {updatingContactNumber ? (
+              <>
+                <input type="text" className="form-control" placeholder="Enter Contact Number" value={contactNumber} onChange={(e) => setContactNumber(e.target.value)} />
+                <button className="btn btn-success mt-2" onClick={() => updateContactNumber(contactNumber, contactNumber)}>Update</button>
+                <button className="btn btn-danger mt-2" onClick={() => removeContactNumber(contactNumber)}>Remove</button>
+              </>
+            ) : (
+              <button className="btn btn-primary" onClick={() => setUpdatingContactNumber(true)}>Update</button>
+              
+            )}
+          </div>
+        ))}
+      </>
+    )
+  }
   return (
     <div className="card">
       <div className="card-body">
         <h5 className="card-title">{student.name}</h5>
         <h6 className="card-subtitle mb-2 text-muted">{student.rollNumber}</h6>
         <p className="card-text">Guardian Name: {student.fatherName}</p>
-        {updatingPhoneNumber ?
-          (<div className="card-text">Phone <input type="number" className="form-control" autoFocus ref={contactNumberRef} onChange={(e) => setContactNumber(e.target.value)} placeholder='New Phone Number' onKeyDown={(e) => { if (e.key === 'Enter') updatePhoneNumber() }}></input><div className=" container text-center mt-2"><div className="row"><button type="button" className="btn btn-success mb-1" onClick={() => updatePhoneNumber()}>Save</button><button type="button" className="btn btn-danger mb-3" onClick={() => { setUpdatingPhoneNumber(false); setContactNumber(''); }}>Cancel</button></div></div></div>)
-          : (<p className="card-text">Phone: {student.contactNumbers ? <a style={{ textDecoration: 'none' }} href={`tel:${student.contactNumbers}`}>&#128222;{student.contactNumbers}</a> : null}<button type="button" className="btn btn-warning ms-3" onClick={() => setUpdatingPhoneNumber(true)}>Update</button> </p>)}
+        <p className="card-text">Contact Numbers: {contactNumbersSpace()} </p>
         <p className="card-text">Fees Pending: {Number(student.feesPending2122 ? student.feesPending2122 : 0 + student.feesPending2223 ? student.feesPending2223 : 0) - (student.deposits ? getDepositTotal() : 0)}</p>
         {moreDetails ? (<>
           <p className="card-text">Mother Name: {student.motherName}</p>
@@ -326,7 +401,7 @@ function StudentInfoDisplay(props) {
 }
 
 function Navbar() {
-  let { user,app,setUser } = useContext(OurContext)
+  let { user, app, setUser } = useContext(OurContext)
   return (
     <nav className="navbar navbar-expand-lg" >
       <div className="container-fluid">
@@ -345,7 +420,7 @@ function Navbar() {
           </ul>
         </div>
         <div className="d-flex">
-          {user ? <button className="btn btn-outline-danger" onClick={() => {app.currentUser.logOut();setUser(null)}}>Logout</button> : <Link className="btn btn-outline-success" to="/" >Login</Link>}
+          {user ? <button className="btn btn-outline-danger" onClick={() => { app.currentUser.logOut(); setUser(null) }}>Logout</button> : <Link className="btn btn-outline-success" to="/" >Login</Link>}
         </div>
       </div>
     </nav>
