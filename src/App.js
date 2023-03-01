@@ -1,6 +1,5 @@
 import { useEffect, useState, useRef, createContext, useContext, useMemo } from "react";
 import * as Realm from "realm-web";
-import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import FloatingLabel from 'react-bootstrap/FloatingLabel';
 import Form from 'react-bootstrap/Form';
@@ -189,12 +188,12 @@ function CheckDataByAdmin() {
     <>
       <form>
         <FloatingLabel controlId="floatingSelect" label="Class" className="mb-3">
-          <Form.Select name="classGrade" aria-label="Select Class" ref={classGradeRef} onChange={(e) => setClassGrade(e.target.value)}>
+          <Form.Select name="classGrade" aria-label="Select Class" ref={classGradeRef} onChange={(e) => {setClassGrade(e.target.value)}}>
             {data && data.length > 0 ? (classGrade == 0 ? <option>Select Class</option> : null) : <option>Loading Data...</option>}
             {data && data.length > 0 ? (classGrades.map((grade) => <option key={grade} value={grade}>{grade}</option>)) : null}
           </Form.Select>
         </FloatingLabel>
-        {classGrade && classGrade > 0 ?
+        {classGrade ?
           <FloatingLabel controlId="floatingSelect" label="Name" className="mb-3">
             <Form.Select aria-label="Select Student" ref={nameRef} onChange={(e) => setName(e.target.value)}>
               {data && data.filter((student) => student.classGrade == classGrade).map((student) => <option key={student.rollNumber} value={student.name}>{student.name}</option>)}
@@ -213,7 +212,7 @@ function CheckDataByAdmin() {
 }
 
 function StudentInfoDisplay({ student }) {
-  let { user, updateData, data, client } = useContext(OurContext)
+  let {updateData,client } = useContext(OurContext)
   let [moreDetails, setMoreDetails] = useState(false)
   let [depositingFees, setDepositingFees] = useState(false)
   let collection = client.db('school').collection('students')
@@ -233,6 +232,16 @@ function StudentInfoDisplay({ student }) {
   }, [student.contactNumbers])
   useEffect(() => { if (depositingFees) feesDepositCancelRef.current.scrollIntoView() }, [depositingFees])
   function depositFees() {
+    function getDate() {
+      var currentdate = new Date();
+      var datetime = currentdate.getDate() + "/"
+        + (currentdate.getMonth() + 1) + "/"
+        + currentdate.getFullYear() + " @ "
+        + currentdate.getHours() + ":"
+        + currentdate.getMinutes() + ":"
+        + currentdate.getSeconds();
+      return datetime;
+    }
     function formatDate(input) {
       let datePart = input.match(/\d+/g)
       let year = datePart[0]
@@ -260,16 +269,6 @@ function StudentInfoDisplay({ student }) {
       ).then(() => { setDepositingFees(false); alert('Fees deposited successfully'); updateData() }).catch((err) => alert(err))
     }
     if (confirmDeposit) deposit()
-  }
-  function getDate() {
-    var currentdate = new Date();
-    var datetime = currentdate.getDate() + "/"
-      + (currentdate.getMonth() + 1) + "/"
-      + currentdate.getFullYear() + " @ "
-      + currentdate.getHours() + ":"
-      + currentdate.getMinutes() + ":"
-      + currentdate.getSeconds();
-    return datetime;
   }
   function getDepositTotal() {
     let deposits = []
@@ -318,7 +317,7 @@ function StudentInfoDisplay({ student }) {
       collection.updateOne(
         { rollNumber: student.rollNumber },
         { $push: { contactNumbers: newContactNumber } }
-      ).then(() => { alert('Contact Number added successfully'); updateData() }).catch((err) => alert(err))
+      ).then(() => { updateData() }).catch((err) => alert(err))
     }
     //remove contact number from database
     async function removeContactNumber(oldContactNumber) {
@@ -326,7 +325,7 @@ function StudentInfoDisplay({ student }) {
       collection.updateOne(
         { rollNumber: student.rollNumber },
         { $set: { contactNumbers: student.contactNumbers.filter((contactNumber) => contactNumber != oldContactNumber) } }
-      ).then(() => { alert('Contact Number removed successfully'); updateData() }).catch((err) => alert(err))
+      ).then(() => { updateData() }).catch((err) => alert(err))
     }
     //update contact number in database
     function updateContactNumber(oldContactNumber, newContactNumber) {
@@ -334,7 +333,7 @@ function StudentInfoDisplay({ student }) {
       collection.updateOne(
         { rollNumber: student.rollNumber },
         { $set: { contactNumbers: student.contactNumbers.map((contactNumber) => contactNumber == oldContactNumber ? newContactNumber : contactNumber) } }
-      ).then(() => { alert('Contact Number updated successfully'); updateData() }).catch((err) => alert(err))
+      ).then(() => { updateData() }).catch((err) => alert(err))
     }
 
     //if no contact number is present, show button to add contact number, which when clicked will show an input box below the contacts currently present and add button to call addContactNumber function with the new contact number that is in the input field as argument
@@ -345,7 +344,7 @@ function StudentInfoDisplay({ student }) {
             <div className="input-group-prepend">
               <span className="input-group-text">+91 </span>
             </div>
-            <input type="number" autoFocus className="form-control" placeholder="Contact Number" onChange={(e) => setNewContactNumber(e.target.value)} />
+            <input type="number" autoFocus className="form-control" placeholder="Contact Number" onChange={(e) => setNewContactNumber(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') addContactNumber(newContactNumber) }}/>
             <div className="input-group-append">
               <button className="btn btn-success" onClick={() => addContactNumber(newContactNumber)}>Add</button>
               <button className="btn btn-danger" onClick={() => setSettingNewContactNumber(false)}>Cancel</button>
@@ -403,14 +402,13 @@ function StudentInfoDisplay({ student }) {
     }
     return contactsDisplay()
   }
-
   return (
     <div className="card">
       <div className="card-body">
         <h5 className="card-title">{student.name}</h5>
         <h6 className="card-subtitle mb-2 text-muted">{student.rollNumber}</h6>
         <p className="card-text">Guardian Name: {student.fatherName}</p>
-        <p className="card-text">Contact Numbers: {contactNumbersSpace()} </p>
+        <div className="card-text">Contact Numbers: {contactNumbersSpace()} </div>
         <p className="card-text">Fees Pending: {Number(student.feesPending2122 ? student.feesPending2122 : 0 + student.feesPending2223 ? student.feesPending2223 : 0) - (student.deposits ? getDepositTotal() : 0)}</p>
         {moreDetails ? (
           <>
@@ -420,7 +418,9 @@ function StudentInfoDisplay({ student }) {
             {student.deposits ? getTransactionHistory() : null}
           </>
         ) : null}
-        <div className="row"><button className="btn btn-primary mb-2 mt-n3 " onClick={() => setMoreDetails(!moreDetails)}>{moreDetails ? 'Show Less Details ↑' : 'Show More Details ↓'}</button></div>
+        <div className="row">
+          <button className="btn btn-primary mb-2 mt-n3 " onClick={() => setMoreDetails(!moreDetails)}>{moreDetails ? 'Show Less Details ↑' : 'Show More Details ↓'}</button>
+          </div>
         {depositingFees ? (
           <>
             <div className="input-group mb-3">
@@ -431,8 +431,8 @@ function StudentInfoDisplay({ student }) {
               <input type="date" ref={dateOfDepositRef} onKeyDown={(e) => { if (e.key === 'Enter') depositFees() }} placeholder='Deposit Date'></input>
             </div>
             <div className="row">
-              <button className="btn btn-success" onClick={() => depositFees()}>Deposit</button>
-              <button className="btn btn-danger" onClick={() => { setDepositingFees(false) }}>Cancel</button>
+              <button className="btn btn-success mb-1" onClick={() => depositFees()}>Deposit</button>
+              <button className="btn btn-danger mb-1" onClick={() => { setDepositingFees(false) }}>Cancel</button>
             </div>
             <p ref={feesDepositCancelRef}></p>
           </>
