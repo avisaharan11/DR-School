@@ -61,7 +61,7 @@
 
 table {
     width: 100%;
-    border-collapse: collapse;
+    /* border-collapse: collapse; */
 }
 
 thead {
@@ -90,7 +90,7 @@ tbody td {
 
 .fees-info table {
     width: 100%;
-    border-collapse: collapse;
+    /* border-collapse: collapse; */
     margin-top: 10px;
 }
 
@@ -102,3 +102,12 @@ tbody td {
     margin: 0 0 10px;
     font-size: 24px;
 }
+.print-button {
+    display: block;
+  }
+  
+  @media print {
+    .print-button {
+      display: none;
+    }
+  }

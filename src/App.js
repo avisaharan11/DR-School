@@ -36,8 +36,7 @@ function App() {
   }, [user, client])
   let routes = useRoutes([
     { path: '/', element: user && user.isLoggedIn ? <><Navbar /><CheckDataByAdmin /></> : <><Navbar /><Authenticate /> </> },
-    { path: '/print', element: <PrintLayout /> },
-    { path: '*', element: <Navigate to="/" /> }
+    { path: '/kj', element: <Navigate to="/" /> }
   ])
   return (
     <OurContext.Provider value={{
@@ -48,7 +47,11 @@ function App() {
       data,
       updateData
     }}>
-
+      {useRoutes(
+        [
+          { path: '/print', element: <PrintLayout /> },
+        ]
+      )}
       <div className="container">
         {routes}
       </div>
@@ -503,14 +506,15 @@ function PrintLayout() {
   student = JSON.parse(student)
   const { name, classGrade, rollNumber, contactNumbers, fatherName, motherName, deposits, studentResults, classInChargeRemarks } = student;
   return (
+    <>
     <div className="student-info-container">
       <div className="school-info">
         <div className="logo">
-          <img src="abc_school_logo.png" alt="ABC School Logo" />
+          <img src={logoIcon} alt="ABC School Logo" />
         </div>
         <div className="school-details">
-          <h1>ABC School</h1>
-          <h2>Student Information</h2>
+          <h1>DR Memorial School, Chautala</h1>
+          <h4>Student Information</h4>
         </div>
       </div>
 
@@ -572,6 +576,10 @@ function PrintLayout() {
         <p>{"classInChargeRemarks"}</p>
       </div>
     </div>
+    <button className="print-button" onClick={()=>window.print()}>
+      Print
+    </button>
+    </>
   );
 }
 
