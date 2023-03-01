@@ -1,5 +1,7 @@
 import { useEffect, useState, useRef, createContext, useContext, useMemo } from "react";
 import * as Realm from "realm-web";
+import DatePicker from 'react-datepicker';
+import 'react-datepicker/dist/react-datepicker.css';
 import { useRoutes, Link, Navigate, useLocation } from "react-router-dom";
 import logoIcon from './/images/logoIcon.ico'
 
@@ -215,8 +217,8 @@ function StudentInfoDisplay({ student }) {
   let [depositingFees, setDepositingFees] = useState(false)
   let collection = client.db('school').collection('students')
   let amountToDepositRef = useRef(0)
+  let dateOfDepositRef = useRef('')
   let feesDepositCancelRef = useRef('')
-  let newContactNumberRef = useRef('')
   let updateCancelRef = useRef('')
   let [newContactNumber, setNewContactNumber] = useState([])
   let [updatingContactNumber, setUpdatingContactNumber] = useState()
@@ -230,12 +232,30 @@ function StudentInfoDisplay({ student }) {
   }, [student.contactNumbers])
   useEffect(() => { if (depositingFees) feesDepositCancelRef.current.scrollIntoView() }, [depositingFees])
   function depositFees() {
-    if (amountToDepositRef.current.value == 0) return alert('Please enter an amount to deposit')
-    let confirmDeposit = window.confirm(`Confirm deposit Rs.${amountToDepositRef.current.value} for ${student.name} (${student.rollNumber})`)
+    function formatDate (input) {
+      let datePart = input.match(/\d+/g)
+      let year = datePart[0]
+      let month = datePart[1]
+      let day = datePart[2]
+    
+      return day+'/'+month+'/'+year;
+    }
+    if (amountToDepositRef.current.value == 0){
+      alert('Please enter an amount to deposit')
+      amountToDepositRef.current.focus()
+      return 
+    } 
+    if (dateOfDepositRef.current.value == '') {
+      alert('Please enter a date of deposit')
+      dateOfDepositRef.current.focus()
+      return 
+    }
+    let date=formatDate(dateOfDepositRef.current.value)
+    let confirmDeposit = window.confirm(`Confirm deposit Rs.${amountToDepositRef.current.value} on ${date} for ${student.name} (${student.rollNumber})`)
     async function deposit() {
       collection.updateOne(
         { rollNumber: student.rollNumber },
-        { $push: { deposits: { amount: Number(amountToDepositRef.current.value), date: getDate() } } }
+        { $push: { deposits: { amount: Number(amountToDepositRef.current.value), date } } }
       ).then(() => { setDepositingFees(false); alert('Fees deposited successfully'); updateData() }).catch((err) => alert(err))
     }
     if (confirmDeposit) deposit()
@@ -254,7 +274,7 @@ function StudentInfoDisplay({ student }) {
     let deposits = []
     if (student.deposits) {
       for (let i = 0; i < student.deposits.length; i++) {
-        deposits.push(student.deposits[i][0])
+        deposits.push(student.deposits[i].amount)
       }
     }
     return deposits.reduce((partialSum, a) => Number(partialSum) + Number(a), 0)
@@ -320,7 +340,7 @@ function StudentInfoDisplay({ student }) {
     function addContactNumberInput() {
       return (
         <>
-          <div className="input-group my-3">
+          <div className="input-group mb-3">
             <div className="input-group-prepend">
               <span className="input-group-text">+91 </span>
             </div>
@@ -341,11 +361,11 @@ function StudentInfoDisplay({ student }) {
             return (
               <div key={key}>
                 {!(updatingContactNumber == contactNumber) ? <>
-                <div className="mb-1">
-                <button className="btn btn-outline-info btn-sm"><a href={`tel:${contactNumber}`} className="card-link">📞{contactNumber}</a></button>
-                  <button className="btn btn-outline-warning mx-1 btn-sm" onClick={() => { setUpdatingContactNumber(contactNumber) }}>Edit</button>
-                  <button className="btn btn-outline-danger btn-sm" onClick={() => removeContactNumber(contactNumber)}>Delete</button>
-                  </div></>: (<>
+                  <div className="mb-1">
+                    <button className="btn btn-outline-info btn-sm"><a style={{textDecoration:"none"}}href={`tel:${contactNumber}`} className="card-link">📞{contactNumber}</a></button>
+                    <button className="btn btn-outline-warning mx-1 btn-sm" onClick={() => { setUpdatingContactNumber(contactNumber) }}>Edit</button>
+                    <button className="btn btn-outline-danger btn-sm" onClick={() => removeContactNumber(contactNumber)}>Delete</button>
+                  </div></> : (<>
                     <div className="input-group mb-3">
                       <div className="input-group-prepend">
                         <span className="input-group-text">+91 </span>
@@ -356,13 +376,12 @@ function StudentInfoDisplay({ student }) {
                           setNewContactNumber(contactNumber)
                         }} onKeyDown={(e) => { if (e.key === 'Enter') updateContactNumber(contactNumber, newContactNumber) }} className="form-control" value={newContactNumber} onChange={(e) => setNewContactNumber(e.target.value)} />
 
-                      <button className="btn btn-success mb-1" onClick={() => { updateContactNumber(contactNumber, newContactNumber); }}>Save</button>
-
-                      <button className="btn btn-danger mb-1" onClick={() => { setUpdatingContactNumber(false); }}>Cancel</button><span ref={updateCancelRef}></span>
+                      <button className="btn btn-success" onClick={() => { updateContactNumber(contactNumber, newContactNumber); }}>Save</button>
+                      <button className="btn btn-danger" onClick={() => { setUpdatingContactNumber(false); }}>Cancel</button><span ref={updateCancelRef}></span>
 
                     </div>
                   </>
-                  )}
+                )}
 
 
               </div>
@@ -392,7 +411,8 @@ function StudentInfoDisplay({ student }) {
         <p className="card-text">Guardian Name: {student.fatherName}</p>
         <p className="card-text">Contact Numbers: {contactNumbersSpace()} </p>
         <p className="card-text">Fees Pending: {Number(student.feesPending2122 ? student.feesPending2122 : 0 + student.feesPending2223 ? student.feesPending2223 : 0) - (student.deposits ? getDepositTotal() : 0)}</p>
-        {moreDetails ? (<>
+        {moreDetails ? (
+        <>
           <p className="card-text">Mother Name: {student.motherName}</p>
           <p className="card-text">Aadhaar Number: {student.aadhaarNumber}</p>
           <p className="card-text">SRN: {student.srn}</p>
@@ -407,11 +427,15 @@ function StudentInfoDisplay({ student }) {
                 <span className="input-group-text">Rs.</span>
               </div>
               <input type="number" autoFocus className="form-control" ref={amountToDepositRef} onFocus={() => { if (feesDepositCancelRef.current) feesDepositCancelRef.current.scrollIntoView() }} onKeyDown={(e) => { if (e.key === 'Enter') depositFees() }} placeholder='Amount'></input>
+              <input type="date" ref={dateOfDepositRef} onKeyDown={(e) => { if (e.key === 'Enter') depositFees() }} placeholder='Deposit Date'></input>
             </div>
-
-            <div className="row"><button className="btn btn-success mb-1" onClick={() => depositFees()}>Deposit</button> <button className="btn btn-danger" onClick={() => { setDepositingFees(false) }}>Cancel</button></div><p ref={feesDepositCancelRef}></p>
+            <div className="row">
+              <button className="btn btn-success" onClick={() => depositFees()}>Deposit</button>
+              <button className="btn btn-danger" onClick={() => { setDepositingFees(false) }}>Cancel</button>
+              </div>
+            <p ref={feesDepositCancelRef}></p>
           </>
-        ) : <div className="row"><button className="btn btn-success" onClick={() => setDepositingFees(true)}>New Fees Deposit</button></div>}
+        ) : <div className="row"><button className="btn btn-success" onClick={() => setDepositingFees(true)}>New Fees Deposit</button>   </div>}
       </div>
     </div>
   )
