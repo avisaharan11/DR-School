@@ -36,7 +36,7 @@ function App() {
   }, [user, client])
   let routes = useRoutes([
     { path: '/', element: user && user.isLoggedIn ? <><div className="container"><Navbar /><CheckDataByAdmin /></div></> : <><div className="container"><Navbar /><Authenticate /> </div></> },
-    { path: '/print', element: <PrintLayout /> },,
+    { path: '/print', element: <PrintLayout /> }, ,
     { path: '/*', element: <Navigate to="/" /> }
   ])
   return (
@@ -48,7 +48,7 @@ function App() {
       data,
       updateData
     }}>
-        {routes}
+      {routes}
     </OurContext.Provider>
   );
 }
@@ -439,10 +439,9 @@ function StudentInfoDisplay({ student }) {
             <p ref={feesDepositCancelRef}></p>
           </>
         ) : <div className="row"><button className="btn btn-success" onClick={() => setDepositingFees(true)}>New Fees Deposit</button>   </div>}
-      </div>
-      {/* Button to print the student details in a new window  */}
-      <div className="row">
-        <Link to={`/print?student=${JSON.stringify(student)}`}>Print</Link>
+        <div className="d-flex flex-column">
+        <Link to={`/print?student=${JSON.stringify(student)}`} target='_blank' className='d-flex justify-content-center'><button type="button" className="print-button btn btn-info mt-2">Print</button></Link>
+        </div>
       </div>
     </div>
   )
@@ -498,81 +497,82 @@ function PrintLayout() {
   let query = useQuery()
   let student = query.get('student')
   student = JSON.parse(student)
+  useEffect(() => { window.print() }, [])
   const { name, classGrade, rollNumber, contactNumbers, fatherName, motherName, deposits, studentResults, classInChargeRemarks } = student;
   return (
     <>
-    <div className="student-info-container">
-      <div className="school-info">
-        <div className="logo">
-          <img src={logoIcon} alt="ABC School Logo" />
+      <div className="student-info-container">
+        <div className="school-info">
+          <div className="logo">
+            <img src={logoIcon} alt="ABC School Logo" />
+          </div>
+          <div className="school-details">
+            <h1>DR Memorial School, Chautala</h1>
+            <h4>Student Information</h4>
+          </div>
         </div>
-        <div className="school-details">
-          <h1>DR Memorial School, Chautala</h1>
-          <h4>Student Information</h4>
-        </div>
-      </div>
 
-      <div className="personal-info">
-        <div className="left">
-          <p><strong>Name:</strong> {name}</p>
-          <p><strong>Class:</strong> {classGrade}</p>
-          <p><strong>Roll No.:</strong> {rollNumber}</p>
+        <div className="personal-info">
+          <div className="left">
+            <p><strong>Name:</strong> {name}</p>
+            <p><strong>Class:</strong> {classGrade}</p>
+            <p><strong>Roll No.:</strong> {rollNumber}</p>
+          </div>
+          <div className="right">
+            <p><strong>Father's Name:</strong> {fatherName}</p>
+            <p><strong>Mother's Name:</strong> {motherName}</p>
+            <p><strong>Contact:</strong> {contactNumbers && contactNumbers.join(', ')}</p>
+          </div>
         </div>
-        <div className="right">
-          <p><strong>Father's Name:</strong> {fatherName}</p>
-          <p><strong>Mother's Name:</strong> {motherName}</p>
-          <p><strong>Contact:</strong> {contactNumbers.join(', ')}</p>
-        </div>
-      </div>
 
-      <div className="academic-info">
-        <h3>Academic Result</h3>
-        <table>
-          <thead>
-            <tr>
-              <th>Subject</th>
-              <th>Grade</th>
-            </tr>
-          </thead>
-          <tbody>
-            {[{subjectName:"Maths",grade:"43"},{subjectName:"Hindi ",grade:"12"},{subjectName:"English",grade:"23"}].map((result, index) => (
-              <tr key={index}>
-                <td>{result.subjectName}</td>
-                <td>{result.grade}</td>
+        <div className="academic-info">
+          <h3>Academic Result</h3>
+          <table>
+            <thead>
+              <tr>
+                <th>Subject</th>
+                <th>Grade</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody>
+              {[{ subjectName: "Maths", grade: "xx" }, { subjectName: "Hindi ", grade: "xx" }, { subjectName: "English", grade: "xx" }].map((result, index) => (
+                <tr key={index}>
+                  <td>{result.subjectName}</td>
+                  <td>{result.grade}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
 
-      <div className="fees-info">
-        <h3>Fee Deposits</h3>
-        <table>
-          <thead>
-            <tr>
-              <th>Date</th>
-              <th>Amount</th>
-            </tr>
-          </thead>
-          <tbody>
-            {deposits.map((deposit, index) => (
-              <tr key={index}>
-                <td>{deposit.date}</td>
-                <td>{deposit.amount}</td>
+        <div className="fees-info">
+          <h3>Fee Deposits</h3>
+          <table>
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Amount</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody>
+              {deposits && deposits.map((deposit, index) => (
+                <tr key={index}>
+                  <td>{deposit.date}</td>
+                  <td>{deposit.amount}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
 
-      <div className="remarks-info">
-        <h3>Class In-Charge Remarks</h3>
-        <p>{"Very good"}</p>
+        <div className="remarks-info">
+          <h3>Class In-Charge Remarks</h3>
+          <p>{"Very good"}</p>
+        </div>
+        <div className="row">
+          <button type="button" className="print-button btn btn-secondary" onClick={() => window.print()}>Print</button>
+        </div>
       </div>
-      <div className="row">
-      <button type="button" class="print-button btn btn-secondary" onClick={()=>window.print()}>Print</button>
-    </div>
-    </div>
     </>
   );
 }
