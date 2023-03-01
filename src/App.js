@@ -541,7 +541,7 @@ function PrintLayout() {
             </tr>
           </thead>
           <tbody>
-            {[{subjectName:"dfs",grade:"df"},{subjectName:"dfs",grade:"df"},{subjectName:"dfs",grade:"df"}].map((result, index) => (
+            {[{subjectName:"Maths",grade:"43"},{subjectName:"Hindi ",grade:"12"},{subjectName:"English",grade:"23"}].map((result, index) => (
               <tr key={index}>
                 <td>{result.subjectName}</td>
                 <td>{result.grade}</td>
@@ -573,12 +573,12 @@ function PrintLayout() {
 
       <div className="remarks-info">
         <h3>Class In-Charge Remarks</h3>
-        <p>{"classInChargeRemarks"}</p>
+        <p>{"Very good"}</p>
       </div>
+      <div className="row">
+      <button type="button" class="print-button btn btn-secondary" onClick={()=>window.print()}>Print</button>
     </div>
-    <button className="print-button" onClick={()=>window.print()}>
-      Print
-    </button>
+    </div>
     </>
   );
 }
