@@ -225,6 +225,7 @@ function StudentInfoDisplay({ student }) {
   useEffect(()=>{
     setNewContactNumber('')
     setSettingNewContactNumber(false)
+    setUpdatingContactNumber(false)
   },[student.contactNumbers])
   useEffect(() => { if (depositingFees) feesDepositCancelRef.current.scrollIntoView() }, [depositingFees])
   function depositFees() {
@@ -234,7 +235,7 @@ function StudentInfoDisplay({ student }) {
       collection.updateOne(
         { rollNumber: student.rollNumber },
         { $push: { deposits: { amount: Number(amountToDepositRef.current.value), date: getDate() } } }
-      ).then(() => { setDepositingFees(false); setUpdatingContactNumber(false); alert('Fees deposited successfully'); updateData() }).catch((err) => alert(err))
+      ).then(() => { setDepositingFees(false); alert('Fees deposited successfully'); updateData() }).catch((err) => alert(err))
     }
     if (confirmDeposit) deposit()
   }
@@ -295,7 +296,7 @@ function StudentInfoDisplay({ student }) {
       collection.updateOne(
         { rollNumber: student.rollNumber },
         { $push: { contactNumbers: newContactNumber } }
-      ).then(() => { setUpdatingContactNumber(false); alert('Contact Number added successfully'); updateData() }).catch((err) => alert(err))
+      ).then(() => { alert('Contact Number added successfully'); updateData() }).catch((err) => alert(err))
     }
     //remove contact number from database
     async function removeContactNumber(oldContactNumber) {
@@ -311,7 +312,7 @@ function StudentInfoDisplay({ student }) {
       collection.updateOne(
         { rollNumber: student.rollNumber },
         { $set: { contactNumbers: student.contactNumbers.map((contactNumber) => contactNumber == oldContactNumber ? newContactNumber : contactNumber) } }
-      ).then(() => { setUpdatingContactNumber(false); alert('Contact Number updated successfully'); updateData() }).catch((err) => alert(err))
+      ).then(() => { alert('Contact Number updated successfully'); updateData() }).catch((err) => alert(err))
     }
 
     //if no contact number is present, show button to add contact number, which when clicked will show an input box below the contacts currently present and add button to call addContactNumber function with the new contact number that is in the input field as argument
@@ -335,9 +336,9 @@ function StudentInfoDisplay({ student }) {
             return (
               <div key={key}>
                 <a href={`tel:${contactNumber}`} className="card-link">{contactNumber}</a>
-                <span className="material-icons" style={{ cursor: 'pointer' }} onClick={() => setUpdatingContactNumber(contactNumber)}>edit</span>
+                <span className="material-icons" style={{ cursor: 'pointer' }} onClick={() => {setUpdatingContactNumber(contactNumber)}}>edit</span>
                 <span className="material-icons" style={{ cursor: 'pointer' }} onClick={() => removeContactNumber(contactNumber)}>delete</span>
-                {updatingContactNumber == contactNumber ? (
+                {updatingContactNumber==contactNumber ? (
                   <div className="input-group mb-3">
                     <input type="text" className="form-control" placeholder="Contact Number" onChange={(e)=>setNewContactNumber(e.target.value)} />
                     <div className="input-group-append">
