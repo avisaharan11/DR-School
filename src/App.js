@@ -3,8 +3,9 @@ import * as Realm from "realm-web";
 import 'react-datepicker/dist/react-datepicker.css';
 import FloatingLabel from 'react-bootstrap/FloatingLabel';
 import Form from 'react-bootstrap/Form';
-import { useRoutes, Link, Navigate, useLocation } from "react-router-dom";
+import { useRoutes, Link, Navigate, useLocation, useParams } from "react-router-dom";
 import logoIcon from './/images/logoIcon.ico'
+import './/images/printStyles.css'
 
 const OurContext = createContext(null)
 function useQuery() {
@@ -33,7 +34,11 @@ function App() {
       updateData()
     }
   }, [user, client])
-
+  let routes = useRoutes([
+    { path: '/', element: user && user.isLoggedIn ? <><Navbar /><CheckDataByAdmin /></> : <><Navbar /><Authenticate /> </> },
+    { path: '/print', element: <PrintLayout /> },
+    { path: '*', element: <Navigate to="/" /> }
+  ])
   return (
     <OurContext.Provider value={{
       client,
@@ -43,9 +48,9 @@ function App() {
       data,
       updateData
     }}>
+
       <div className="container">
-        <Navbar />
-        {user && user.isLoggedIn ? <CheckDataByAdmin /> : <Authenticate />}
+        {routes}
       </div>
     </OurContext.Provider>
   );
@@ -188,7 +193,7 @@ function CheckDataByAdmin() {
     <>
       <form>
         <FloatingLabel controlId="floatingSelect" label="Class" className="mb-3">
-          <Form.Select name="classGrade" aria-label="Select Class" ref={classGradeRef} onChange={(e) => {setClassGrade(e.target.value)}}>
+          <Form.Select name="classGrade" aria-label="Select Class" ref={classGradeRef} onChange={(e) => { setClassGrade(e.target.value) }}>
             {data && data.length > 0 ? (classGrade == 0 ? <option>Select Class</option> : null) : <option>Loading Data...</option>}
             {data && data.length > 0 ? (classGrades.map((grade) => <option key={grade} value={grade}>{grade}</option>)) : null}
           </Form.Select>
@@ -212,7 +217,7 @@ function CheckDataByAdmin() {
 }
 
 function StudentInfoDisplay({ student }) {
-  let {updateData,client } = useContext(OurContext)
+  let { updateData, client } = useContext(OurContext)
   let [moreDetails, setMoreDetails] = useState(false)
   let [depositingFees, setDepositingFees] = useState(false)
   let collection = client.db('school').collection('students')
@@ -344,7 +349,7 @@ function StudentInfoDisplay({ student }) {
             <div className="input-group-prepend">
               <span className="input-group-text">+91 </span>
             </div>
-            <input type="number" autoFocus className="form-control" placeholder="Contact Number" onChange={(e) => setNewContactNumber(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') addContactNumber(newContactNumber) }}/>
+            <input type="number" autoFocus className="form-control" placeholder="Contact Number" onChange={(e) => setNewContactNumber(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') addContactNumber(newContactNumber) }} />
             <div className="input-group-append">
               <button className="btn btn-success" onClick={() => addContactNumber(newContactNumber)}>Add</button>
               <button className="btn btn-danger" onClick={() => setSettingNewContactNumber(false)}>Cancel</button>
@@ -408,7 +413,7 @@ function StudentInfoDisplay({ student }) {
         <h5 className="card-title">{student.name}</h5>
         <h6 className="card-subtitle mb-2 text-muted">{student.rollNumber}</h6>
         <p className="card-text">Guardian Name: {student.fatherName}</p>
-        <div className="card-text">Contact Numbers: {contactNumbersSpace()} </div>
+        <div className="card-text mb-3">Contact Numbers: {contactNumbersSpace()} </div>
         <p className="card-text">Fees Pending: {Number(student.feesPending2122 ? student.feesPending2122 : 0 + student.feesPending2223 ? student.feesPending2223 : 0) - (student.deposits ? getDepositTotal() : 0)}</p>
         {moreDetails ? (
           <>
@@ -420,7 +425,7 @@ function StudentInfoDisplay({ student }) {
         ) : null}
         <div className="row">
           <button className="btn btn-primary mb-2 mt-n3 " onClick={() => setMoreDetails(!moreDetails)}>{moreDetails ? 'Show Less Details ↑' : 'Show More Details ↓'}</button>
-          </div>
+        </div>
         {depositingFees ? (
           <>
             <div className="input-group mb-3">
@@ -437,6 +442,10 @@ function StudentInfoDisplay({ student }) {
             <p ref={feesDepositCancelRef}></p>
           </>
         ) : <div className="row"><button className="btn btn-success" onClick={() => setDepositingFees(true)}>New Fees Deposit</button>   </div>}
+      </div>
+      {/* Button to print the student details in a new window  */}
+      <div className="row">
+        <Link to={`/print?student=${JSON.stringify(student)}`}>Print</Link>
       </div>
     </div>
   )
@@ -486,5 +495,88 @@ function ScrollToTopButton() {
     <button className="scrollTop btn btn-outline-success btn-lg" type="button" onClick={scrollTop} style={{ display: showScroll ? 'block' : 'none', position: 'fixed', bottom: '20px', right: '20px', }}>↑</button>
   );
 }
+
+//Print layout for Student Information with styling for print.
+function PrintLayout() {
+  let query = useQuery()
+  let student = query.get('student')
+  student = JSON.parse(student)
+  const { name, classGrade, rollNumber, contactNumbers, fatherName, motherName, deposits, studentResults, classInChargeRemarks } = student;
+  return (
+    <div className="print-layout">
+      <h1>ABC School</h1>
+      <img src="/path/to/school-logo.png" alt="School Logo" className="school-logo" />
+      <h2>Student Information</h2>
+
+      <div className="group">
+        <h3>Personal Information</h3>
+        <ul>
+          <li><strong>Name:</strong> {name}</li>
+          <li><strong>Class:</strong> {classGrade}</li>
+          <li><strong>Roll Number:</strong> {rollNumber}</li>
+          </ul>
+          <ul align='right'>
+          <li><strong>Father's Name:</strong> {fatherName}</li>
+          <li><strong>Mother's Name:</strong> {motherName}</li>
+          <li>
+            <strong>Contact Numbers:</strong>
+            <ul>
+              {contactNumbers.map((number, index) => (
+                <li key={index}>{number}</li>
+              ))}
+              </ul>
+      </li>
+    </ul>
+  </div>
+
+  <div className="academic-info">
+    <h3>Academic Result</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>Subject</th>
+          <th>Grade</th>
+        </tr>
+      </thead>
+      <tbody>
+        {[{subjectName:"kbjb",grade:"h"},{subjectName:"kbjb",grade:"h"}].map((result, index) => (
+          <tr key={index}>
+            <td>{result.subjectName}</td>
+            <td>{result.grade}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+
+  <div className="fees-info">
+    <h3>Fee Deposits</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Amount</th>
+        </tr>
+      </thead>
+      <tbody>
+        {deposits.map((deposit, index) => (
+          <tr key={index}>
+            <td>{deposit.date}</td>
+            <td>{deposit.amount}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+
+  <div className="remarks-info">
+    <h3>Class In-Charge Remarks</h3>
+    <p>{"classInChargeRemarks"}</p>
+  </div>
+</div>
+  );
+};
+
+
 
 export default App;
