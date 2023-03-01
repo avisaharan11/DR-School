@@ -35,8 +35,9 @@ function App() {
     }
   }, [user, client])
   let routes = useRoutes([
-    { path: '/', element: user && user.isLoggedIn ? <><Navbar /><CheckDataByAdmin /></> : <><Navbar /><Authenticate /> </> },
-    { path: '/kj', element: <Navigate to="/" /> }
+    { path: '/', element: user && user.isLoggedIn ? <><div className="container"><Navbar /><CheckDataByAdmin /></div></> : <><div className="container"><Navbar /><Authenticate /> </div></> },
+    { path: '/print', element: <PrintLayout /> },,
+    { path: '/*', element: <Navigate to="/" /> }
   ])
   return (
     <OurContext.Provider value={{
@@ -47,14 +48,7 @@ function App() {
       data,
       updateData
     }}>
-      {useRoutes(
-        [
-          { path: '/print', element: <PrintLayout /> },
-        ]
-      )}
-      <div className="container">
         {routes}
-      </div>
     </OurContext.Provider>
   );
 }
