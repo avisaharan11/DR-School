@@ -2,6 +2,8 @@ import { useEffect, useState, useRef, createContext, useContext, useMemo } from 
 import * as Realm from "realm-web";
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
+import FloatingLabel from 'react-bootstrap/FloatingLabel';
+import Form from 'react-bootstrap/Form';
 import { useRoutes, Link, Navigate, useLocation } from "react-router-dom";
 import logoIcon from './/images/logoIcon.ico'
 
@@ -186,25 +188,24 @@ function CheckDataByAdmin() {
   return (
     <>
       <form>
-        <div className="form-group mb-3">
-          <label htmlFor="classGrade">Class</label>
-          <select className="form-select" aria-label="Select Class" name="classGrade" ref={classGradeRef} onChange={(e) => setClassGrade(e.target.value)}>
+        <FloatingLabel controlId="floatingSelect" label="Class" className="mb-3">
+          <Form.Select name="classGrade" aria-label="Select Class" ref={classGradeRef} onChange={(e) => setClassGrade(e.target.value)}>
             {data && data.length > 0 ? (classGrade == 0 ? <option>Select Class</option> : null) : <option>Loading Data...</option>}
             {data && data.length > 0 ? (classGrades.map((grade) => <option key={grade} value={grade}>{grade}</option>)) : null}
-          </select>
-        </div>
-        {classGrade && classGrade > 0 ? <div className="form-group mb-3">
-          <label htmlFor="name">Name</label>
-          <select className="form-select" aria-label="Select Student" name="name" ref={nameRef} onChange={(e) => setName(e.target.value)}>
-            {data && data.filter((student) => student.classGrade == classGrade).map((student) => <option key={student.rollNumber} value={student.name}>{student.name}</option>)}
-          </select>
-        </div> : null}
-        {name && name.length > 0 ? <div className="form-group mb-3">
-          <label htmlFor="rollNumberAndGuardian">Roll Number and Guardian Name</label>
-          <select className="form-select" aria-label="Select Roll Number & Guardian Name" ref={rollNumberRef} name="rollNumberAndGuardian" onChange={e => setRollNumber(e.target.value)}>
-            {data && filterData().map((student) => <option key={student.rollNumber} value={student.rollNumber}>{student.rollNumber} & {student.fatherName}</option>)}
-          </select>
-        </div> : null}
+          </Form.Select>
+        </FloatingLabel>
+        {classGrade && classGrade > 0 ?
+          <FloatingLabel controlId="floatingSelect" label="Name" className="mb-3">
+            <Form.Select aria-label="Select Student" ref={nameRef} onChange={(e) => setName(e.target.value)}>
+              {data && data.filter((student) => student.classGrade == classGrade).map((student) => <option key={student.rollNumber} value={student.name}>{student.name}</option>)}
+            </Form.Select>
+          </FloatingLabel> : null}
+        {name && name.length > 0 ?
+          <FloatingLabel controlId="floatingSelect" label="Roll Number and Guardian Name" className="mb-3">
+            <Form.Select aria-label="Roll Number and Guardian Name" ref={rollNumberRef} onChange={e => setRollNumber(e.target.value)}>
+              {data && filterData().map((student) => <option key={student.rollNumber} value={student.rollNumber}>{student.rollNumber} & {student.fatherName}</option>)}
+            </Form.Select>
+          </FloatingLabel> : null}
       </form>
       {rollNumber && rollNumber != 0 && <StudentInfoDisplay student={data.find((student) => student.rollNumber == rollNumber)} />}
     </>
@@ -232,25 +233,25 @@ function StudentInfoDisplay({ student }) {
   }, [student.contactNumbers])
   useEffect(() => { if (depositingFees) feesDepositCancelRef.current.scrollIntoView() }, [depositingFees])
   function depositFees() {
-    function formatDate (input) {
+    function formatDate(input) {
       let datePart = input.match(/\d+/g)
       let year = datePart[0]
       let month = datePart[1]
       let day = datePart[2]
-    
-      return day+'/'+month+'/'+year;
+
+      return day + '/' + month + '/' + year;
     }
-    if (amountToDepositRef.current.value == 0){
+    if (amountToDepositRef.current.value == 0) {
       alert('Please enter an amount to deposit')
       amountToDepositRef.current.focus()
-      return 
-    } 
+      return
+    }
     if (dateOfDepositRef.current.value == '') {
       alert('Please enter a date of deposit')
       dateOfDepositRef.current.focus()
-      return 
+      return
     }
-    let date=formatDate(dateOfDepositRef.current.value)
+    let date = formatDate(dateOfDepositRef.current.value)
     let confirmDeposit = window.confirm(`Confirm deposit Rs.${amountToDepositRef.current.value} on ${date} for ${student.name} (${student.rollNumber})`)
     async function deposit() {
       collection.updateOne(
@@ -362,7 +363,7 @@ function StudentInfoDisplay({ student }) {
               <div key={key}>
                 {!(updatingContactNumber == contactNumber) ? <>
                   <div className="mb-1">
-                    <button className="btn btn-outline-info btn-sm"><a style={{textDecoration:"none"}}href={`tel:${contactNumber}`} className="card-link">📞{contactNumber}</a></button>
+                    <button className="btn btn-outline-info btn-sm"><a style={{ textDecoration: "none" }} href={`tel:${contactNumber}`} className="card-link">📞{contactNumber}</a></button>
                     <button className="btn btn-outline-warning mx-1 btn-sm" onClick={() => { setUpdatingContactNumber(contactNumber) }}>Edit</button>
                     <button className="btn btn-outline-danger btn-sm" onClick={() => removeContactNumber(contactNumber)}>Delete</button>
                   </div></> : (<>
@@ -412,12 +413,12 @@ function StudentInfoDisplay({ student }) {
         <p className="card-text">Contact Numbers: {contactNumbersSpace()} </p>
         <p className="card-text">Fees Pending: {Number(student.feesPending2122 ? student.feesPending2122 : 0 + student.feesPending2223 ? student.feesPending2223 : 0) - (student.deposits ? getDepositTotal() : 0)}</p>
         {moreDetails ? (
-        <>
-          <p className="card-text">Mother Name: {student.motherName}</p>
-          <p className="card-text">Aadhaar Number: {student.aadhaarNumber}</p>
-          <p className="card-text">SRN: {student.srn}</p>
-          {student.deposits ? getTransactionHistory() : null}
-        </>
+          <>
+            <p className="card-text">Mother Name: {student.motherName}</p>
+            <p className="card-text">Aadhaar Number: {student.aadhaarNumber}</p>
+            <p className="card-text">SRN: {student.srn}</p>
+            {student.deposits ? getTransactionHistory() : null}
+          </>
         ) : null}
         <div className="row"><button className="btn btn-primary mb-2 mt-n3 " onClick={() => setMoreDetails(!moreDetails)}>{moreDetails ? 'Show Less Details ↑' : 'Show More Details ↓'}</button></div>
         {depositingFees ? (
@@ -432,7 +433,7 @@ function StudentInfoDisplay({ student }) {
             <div className="row">
               <button className="btn btn-success" onClick={() => depositFees()}>Deposit</button>
               <button className="btn btn-danger" onClick={() => { setDepositingFees(false) }}>Cancel</button>
-              </div>
+            </div>
             <p ref={feesDepositCancelRef}></p>
           </>
         ) : <div className="row"><button className="btn btn-success" onClick={() => setDepositingFees(true)}>New Fees Deposit</button>   </div>}
