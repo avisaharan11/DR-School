@@ -214,11 +214,14 @@ function StudentInfoDisplay({ student }) {
   let [moreDetails, setMoreDetails] = useState(false)
   let [depositingFees, setDepositingFees] = useState(false)
   let [updatingContactNumber, setUpdatingContactNumber] = useState(false)
+  let [contactNumberToUpdate, setContactNumberToUpdate] = useState('')
   let collection = client.db('school').collection('students')
   let [contactNumber, setContactNumber] = useState('')
   let amountToDepositRef = useRef(0)
   let feesDepositCancelRef = useRef('')
-  useEffect(() => { setDepositingFees(false) }, [student.rollNumber])
+  let contactNumberRef = useRef(Array(student.contactNumbers?student.contactNumbers.length:1).fill(null))
+
+  useEffect(() => { setDepositingFees(false); setUpdatingContactNumber(false)}, [student.rollNumber])
   useEffect(() => { if (depositingFees) feesDepositCancelRef.current.scrollIntoView() }, [depositingFees])
   function depositFees() {
     if (amountToDepositRef.current.value == 0) return alert('Please enter an amount to deposit')
@@ -288,33 +291,49 @@ function StudentInfoDisplay({ student }) {
       collection.updateOne(
         { rollNumber: student.rollNumber },
         { $push: { contactNumbers: contactNumber } }
-      ).then(() => { setUpdatingContactNumber(false); setDepositingFees(false); alert('Contact Number added successfully'); setContactNumber(''); updateData() }).catch((err) => alert(err))
+      ).then(() => { setUpdatingContactNumber(false); setDepositingFees(false); alert('Contact Number added successfully'); updateData() }).catch((err) => alert(err))
     }
     if (confirmAddContactNumber) addContactNumber()
   }
   //update contact number in database
-  function updateContactNumber(oldContactNumber, newContactNumber) {
-    if (contactNumber.length == 0) return alert('Please enter a contact number')
-    let confirmUpdateContactNumber = window.confirm(`Confirm updating ${contactNumber} for ${student.name} (${student.rollNumber})`)
-    async function update() {
-      function updateArrayItem(arr = student.contactNumbers) {
-        const index = arr.indexOf(oldContactNumber); // Get the index of the item to delete
-        if (index !== -1) {
-          arr.splice(index, 1, newContactNumber); // Delete the item and insert the new item
+  function updateContactNumber(key, newContactNumber) {
+    let pElement = contactNumberRef.current[key]
+    let oldContactNumber=pElement.textContent
+    // insert a text input element in place of the anchor element
+    pElement.innerHTML = `<input type="text" class="form-control" value="${oldContactNumber}" />`
+    // select the text input element
+    let inputElement = pElement.querySelector('input')
+    // focus on the text input element
+    inputElement.focus()
+    // when the user presses enter, update the contact number
+    inputElement.addEventListener('keyup', (e) => {
+      if (e.keyCode === 13) {
+        let newContactNumber = inputElement.value
+        if (newContactNumber.length == 0) return alert('Please enter a contact number')
+        let confirmUpdateContactNumber = window.confirm(`Confirm updating ${newContactNumber} for ${student.name} (${student.rollNumber})`)
+        async function update() {
+          function updateArrayItem(arr = student.contactNumbers) {
+            const index = arr.indexOf(oldContactNumber); // Get the index of the item to delete
+            if (index !== -1) {
+              arr.splice(index, 1, newContactNumber); // Delete the item and insert the new item
+            }
+            return arr;
+          }
+          collection.updateOne(
+            { rollNumber: student.rollNumber },
+            { $set: { contactNumbers: updateArrayItem() } }
+          ).then(() => { setUpdatingContactNumber(false); setDepositingFees(false); alert('Contact Number updated successfully'); 
+          pElement.innerHTML=`<a href={tel:${newContactNumber}}>${newContactNumber}</a>`
+          updateData() }).catch((err) => alert(err))
         }
-        return arr;
+        if (confirmUpdateContactNumber) update()
       }
-      collection.updateOne(
-        { rollNumber: student.rollNumber },
-        { $set: { contactNumbers: updateArrayItem() } }
-      ).then(() => { setUpdatingContactNumber(false); setDepositingFees(false); alert('Contact Number updated successfully'); updateData() }).catch((err) => alert(err))
-    }
-    if (confirmUpdateContactNumber) update()
+    })
   }
   //remove contact number from database
-  function removeContactNumber(contactNumberToRemove) {
-    if (contactNumber.length == 0) return alert('Please enter a contact number')
-    let confirmRemoveContactNumber = window.confirm(`Confirm removing ${contactNumber} for ${student.name} (${student.rollNumber})`)
+  function removeContactNumber(key) {
+    let contactNumberToRemove = contactNumberRef.current[key].textContent
+    let confirmRemoveContactNumber = window.confirm(`Confirm removing ${contactNumberToRemove} for ${student.name} (${student.rollNumber})`)
     async function remove() {
       function removeItemFromArray(arr = student.contactNumbers, item = contactNumberToRemove) {
         const index = arr.indexOf(item); // Get the index of the item to remove
@@ -334,38 +353,51 @@ function StudentInfoDisplay({ student }) {
   //display contact numbers with telephone anchor tags, with update and remove icons. When clicked on update icon, it will turn that contact number space into input box to update contact number, with an update button, which when clicked will call updateContactNumber function with contact number that is being updated and new contact number in input field as arguments. When clicked on remove icon, it will call removeContactNumber function to remove that specific contact number from database. If no contact number is present, it will show button to add contact number, which when clicked will show an input box and add button to call addContactNumber function with contact number in input field as argument 
   function contactNumbersSpace() {
     if (!student.contactNumbers || student.contactNumbers.length == 0) {
-      return (
-        <>
-          {updatingContactNumber ? (
-            <>
-              <input type="text" className="form-control" placeholder="Enter Contact Number" value={contactNumber} onChange={(e) => setContactNumber(e.target.value)} />
-              <button className="btn btn-success mt-2" onClick={addContactNumber}>Add</button>
-            </>
-          ) : (
-            <button className="btn btn-success" onClick={() => setUpdatingContactNumber(true)}>Add Contact Number</button>
-          )}
-        </>
-      )
+      if(updatingContactNumber){
+        return (
+          <>
+            <div className="d-flex justify-content-between">
+              <input type="text" className="form-control" value={contactNumber} onChange={(e) => setContactNumber(e.target.value)} />
+              <button className="btn btn-primary" onClick={() => addContactNumber(contactNumber)}>Add</button>
+            </div>
+          </>
+        )
+      }
+      else{
+        return (
+          <>
+            <button className="btn btn-primary" onClick={() => setUpdatingContactNumber(true)}>Add Contact Number</button>
+          </>
+        )
+      }
     }
-    return (
-      <>
-        {student.contactNumbers.map((contactNumber, key) => (
-          <div key={key}>
-            <a href={`tel:${contactNumber}`} className="card-link">{contactNumber}</a>
-            {updatingContactNumber ? (
-              <>
-                <input type="text" className="form-control" placeholder="Enter Contact Number" value={contactNumber} onChange={(e) => setContactNumber(e.target.value)} />
-                <button className="btn btn-success mt-2" onClick={() => updateContactNumber(contactNumber, contactNumber)}>Update</button>
-                <button className="btn btn-danger mt-2" onClick={() => removeContactNumber(contactNumber)}>Remove</button>
-              </>
-            ) : (
-              <button className="btn btn-primary" onClick={() => setUpdatingContactNumber(true)}>Update</button>
-              
-            )}
-          </div>
-        ))}
-      </>
-    )
+    else {
+      if (updatingContactNumber) {
+        return (
+          <>
+            <div className="d-flex justify-content-between">
+              <input type="text" className="form-control" value={contactNumber} onChange={(e) => setContactNumber(e.target.value)} />
+              <button className="btn btn-primary" onClick={() => updateContactNumber(contactNumberToUpdate, contactNumber)}>Update</button>
+            </div>
+          </>
+        )
+      }
+      else {
+        return (
+          <>
+            {student.contactNumbers.map((contactNumber, key) => 
+            <div key={key} className="d-flex justify-content-between">
+              <p ref={(el) => (contactNumberRef.current[key] = el)} className="card-link"><a href={`tel:${contactNumber}`}>{contactNumber}</a></p>
+              <div className="d-flex">
+                <button className="btn btn-primary" onClick={() => { updateContactNumber(key) }}><i className="fas fa-edit"></i></button>
+                <button className="btn btn-primary" onClick={() => removeContactNumber(key)}><i className="fas fa-trash-alt"></i></button>
+              </div>
+            </div>)}
+            <button className="btn btn-primary" onClick={() => setUpdatingContactNumber(true)}>Add Contact Number</button>
+          </>
+        )
+      }
+    }
   }
   return (
     <div className="card">
