@@ -217,16 +217,17 @@ function StudentInfoDisplay({ student }) {
   let amountToDepositRef = useRef(0)
   let feesDepositCancelRef = useRef('')
   let newContactNumberRef = useRef('')
+  let updateCancelRef = useRef('')
   let [newContactNumber, setNewContactNumber] = useState([])
   let [updatingContactNumber, setUpdatingContactNumber] = useState()
   let [settingNewContactNumber, setSettingNewContactNumber] = useState()
 
   useEffect(() => { setDepositingFees(false); setUpdatingContactNumber(false) }, [student.rollNumber])
-  useEffect(()=>{
+  useEffect(() => {
     setNewContactNumber('')
     setSettingNewContactNumber(false)
     setUpdatingContactNumber(false)
-  },[student.contactNumbers])
+  }, [student.contactNumbers])
   useEffect(() => { if (depositingFees) feesDepositCancelRef.current.scrollIntoView() }, [depositingFees])
   function depositFees() {
     if (amountToDepositRef.current.value == 0) return alert('Please enter an amount to deposit')
@@ -319,10 +320,14 @@ function StudentInfoDisplay({ student }) {
     function addContactNumberInput() {
       return (
         <>
-          <div className="input-group mb-3">
-            <input type="text" className="form-control" placeholder="Contact Number" onChange={(e)=>setNewContactNumber(e.target.value)} />
+          <div className="input-group my-3">
+            <div className="input-group-prepend">
+              <span className="input-group-text">+91 </span>
+            </div>
+            <input type="number" autoFocus className="form-control" placeholder="Contact Number" onChange={(e) => setNewContactNumber(e.target.value)} />
             <div className="input-group-append">
-              <button className="btn btn-outline-secondary" type="button" onClick={() => addContactNumber(newContactNumber)}>Add</button>
+              <button className="btn btn-success" onClick={() => addContactNumber(newContactNumber)}>Add</button>
+              <button className="btn btn-danger" onClick={() => setSettingNewContactNumber(false)}>Cancel</button>
             </div>
           </div>
         </>
@@ -335,17 +340,31 @@ function StudentInfoDisplay({ student }) {
           {student.contactNumbers.map((contactNumber, key) => {
             return (
               <div key={key}>
-                <a href={`tel:${contactNumber}`} className="card-link">{contactNumber}</a>
-                <span className="material-icons" style={{ cursor: 'pointer' }} onClick={() => {setUpdatingContactNumber(contactNumber)}}>edit</span>
-                <span className="material-icons" style={{ cursor: 'pointer' }} onClick={() => removeContactNumber(contactNumber)}>delete</span>
-                {updatingContactNumber==contactNumber ? (
-                  <div className="input-group mb-3">
-                    <input type="text" className="form-control" placeholder="Contact Number" onChange={(e)=>setNewContactNumber(e.target.value)} />
-                    <div className="input-group-append">
-                      <button className="btn btn-outline-secondary" type="button" onClick={() => {updateContactNumber(contactNumber, newContactNumber);}}>Update</button>
+                {!(updatingContactNumber == contactNumber) ? <>
+                <div className="mb-1">
+                <button className="btn btn-outline-info btn-sm"><a href={`tel:${contactNumber}`} className="card-link">📞{contactNumber}</a></button>
+                  <button className="btn btn-outline-warning mx-1 btn-sm" onClick={() => { setUpdatingContactNumber(contactNumber) }}>Edit</button>
+                  <button className="btn btn-outline-danger btn-sm" onClick={() => removeContactNumber(contactNumber)}>Delete</button>
+                  </div></>: (<>
+                    <div className="input-group mb-3">
+                      <div className="input-group-prepend">
+                        <span className="input-group-text">+91 </span>
+                      </div>
+                      <input type="number" autoFocus
+                        onFocus={() => {
+                          if (updateCancelRef.current) updateCancelRef.current.scrollIntoView()
+                          setNewContactNumber(contactNumber)
+                        }} onKeyDown={(e) => { if (e.key === 'Enter') updateContactNumber(contactNumber, newContactNumber) }} className="form-control" value={newContactNumber} onChange={(e) => setNewContactNumber(e.target.value)} />
+
+                      <button className="btn btn-success mb-1" onClick={() => { updateContactNumber(contactNumber, newContactNumber); }}>Save</button>
+
+                      <button className="btn btn-danger mb-1" onClick={() => { setUpdatingContactNumber(false); }}>Cancel</button><span ref={updateCancelRef}></span>
+
                     </div>
-                  </div>
-                ) : null}
+                  </>
+                  )}
+
+
               </div>
             )
           })}
@@ -356,10 +375,10 @@ function StudentInfoDisplay({ student }) {
     function contactsDisplay() {
       return (
         <>
-          {student.contactNumbers && student.contactNumbers.length>0 && contactNumbers()}
-          {settingNewContactNumber?addContactNumberInput():null}
-          {!settingNewContactNumber?<span className="material-icons" style={{ cursor: 'pointer' }} onClick={() => setSettingNewContactNumber(!settingNewContactNumber)}>add</span>
-    :null}</>
+          {student.contactNumbers && student.contactNumbers.length > 0 && contactNumbers()}
+          {settingNewContactNumber ? addContactNumberInput() : null}
+          {!settingNewContactNumber ? <button className="btn btn-outline-success btn-sm" onClick={() => setSettingNewContactNumber(!settingNewContactNumber)}>Add New</button>
+            : null}</>
       )
     }
     return contactsDisplay()
