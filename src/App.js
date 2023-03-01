@@ -503,79 +503,77 @@ function PrintLayout() {
   student = JSON.parse(student)
   const { name, classGrade, rollNumber, contactNumbers, fatherName, motherName, deposits, studentResults, classInChargeRemarks } = student;
   return (
-    <div className="print-layout">
-      <h1>ABC School</h1>
-      <img src="/path/to/school-logo.png" alt="School Logo" className="school-logo" />
-      <h2>Student Information</h2>
+    <div className="student-info-container">
+      <div className="school-info">
+        <div className="logo">
+          <img src="abc_school_logo.png" alt="ABC School Logo" />
+        </div>
+        <div className="school-details">
+          <h1>ABC School</h1>
+          <h2>Student Information</h2>
+        </div>
+      </div>
 
-      <div className="group">
-        <h3>Personal Information</h3>
-        <ul>
-          <li><strong>Name:</strong> {name}</li>
-          <li><strong>Class:</strong> {classGrade}</li>
-          <li><strong>Roll Number:</strong> {rollNumber}</li>
-          </ul>
-          <ul align='right'>
-          <li><strong>Father's Name:</strong> {fatherName}</li>
-          <li><strong>Mother's Name:</strong> {motherName}</li>
-          <li>
-            <strong>Contact Numbers:</strong>
-            <ul>
-              {contactNumbers.map((number, index) => (
-                <li key={index}>{number}</li>
-              ))}
-              </ul>
-      </li>
-    </ul>
-  </div>
+      <div className="personal-info">
+        <div className="left">
+          <p><strong>Name:</strong> {name}</p>
+          <p><strong>Class:</strong> {classGrade}</p>
+          <p><strong>Roll No.:</strong> {rollNumber}</p>
+        </div>
+        <div className="right">
+          <p><strong>Father's Name:</strong> {fatherName}</p>
+          <p><strong>Mother's Name:</strong> {motherName}</p>
+          <p><strong>Contact:</strong> {contactNumbers.join(', ')}</p>
+        </div>
+      </div>
 
-  <div className="academic-info">
-    <h3>Academic Result</h3>
-    <table>
-      <thead>
-        <tr>
-          <th>Subject</th>
-          <th>Grade</th>
-        </tr>
-      </thead>
-      <tbody>
-        {[{subjectName:"kbjb",grade:"h"},{subjectName:"kbjb",grade:"h"}].map((result, index) => (
-          <tr key={index}>
-            <td>{result.subjectName}</td>
-            <td>{result.grade}</td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
-  </div>
+      <div className="academic-info">
+        <h3>Academic Result</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Subject</th>
+              <th>Grade</th>
+            </tr>
+          </thead>
+          <tbody>
+            {[{subjectName:"dfs",grade:"df"},{subjectName:"dfs",grade:"df"},{subjectName:"dfs",grade:"df"}].map((result, index) => (
+              <tr key={index}>
+                <td>{result.subjectName}</td>
+                <td>{result.grade}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
 
-  <div className="fees-info">
-    <h3>Fee Deposits</h3>
-    <table>
-      <thead>
-        <tr>
-          <th>Date</th>
-          <th>Amount</th>
-        </tr>
-      </thead>
-      <tbody>
-        {deposits.map((deposit, index) => (
-          <tr key={index}>
-            <td>{deposit.date}</td>
-            <td>{deposit.amount}</td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
-  </div>
+      <div className="fees-info">
+        <h3>Fee Deposits</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Amount</th>
+            </tr>
+          </thead>
+          <tbody>
+            {deposits.map((deposit, index) => (
+              <tr key={index}>
+                <td>{deposit.date}</td>
+                <td>{deposit.amount}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
 
-  <div className="remarks-info">
-    <h3>Class In-Charge Remarks</h3>
-    <p>{"classInChargeRemarks"}</p>
-  </div>
-</div>
+      <div className="remarks-info">
+        <h3>Class In-Charge Remarks</h3>
+        <p>{"classInChargeRemarks"}</p>
+      </div>
+    </div>
   );
-};
+}
 
 
 
