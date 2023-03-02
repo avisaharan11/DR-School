@@ -410,7 +410,7 @@ function StudentInfoDisplay({ student }) {
         <h5 className="card-title">{student.name}</h5>
         <h6 className="card-subtitle mb-2 text-muted">{student.rollNumber}</h6>
         <p className="card-text">Guardian Name: {student.fatherName}</p>
-        <div className="card-text mb-3">Contact Numbers: {contactNumbersSpace()} </div>
+        <div className="card-text mb-3">Contact Numbers: {student.contactNumbers && contactNumbersSpace()} </div>
         <p className="card-text">Fees Pending: {Number(student.feesPending2122 ? student.feesPending2122 : 0 + student.feesPending2223 ? student.feesPending2223 : 0) - (student.deposits ? getDepositTotal() : 0)}</p>
         {moreDetails ? (
           <>
