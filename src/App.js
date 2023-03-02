@@ -3,7 +3,7 @@ import * as Realm from "realm-web";
 import 'react-datepicker/dist/react-datepicker.css';
 import FloatingLabel from 'react-bootstrap/FloatingLabel';
 import Form from 'react-bootstrap/Form';
-import { useRoutes, Link, Navigate, useLocation, useParams } from "react-router-dom";
+import { useRoutes, Link, Navigate, useLocation, useSearchParams } from "react-router-dom";
 import logoIcon from './/images/logoIcon.ico'
 import './/images/printStyles.css'
 
@@ -35,9 +35,12 @@ function App() {
     }
   }, [user, client])
   let routes = useRoutes([
-    { path: '/', element: user && user.isLoggedIn ? <><div className="container"><Navbar /><CheckDataByAdmin /></div></> : <><div className="container"><Navbar /><Authenticate /> </div></> },
-    { path: '/print', element: <PrintLayout /> }, ,
+    { path: '/', element: user && user.isLoggedIn ? <div className="container"><Navbar /><CheckDataByAdmin /></div> : <><Navbar /><Authenticate /> </> },
+    { path: '/print', element: <PrintLayout /> },
+    { path: '/resetpassword', element: <Authenticate /> },
+    { path: '/settingNewPassword', element: <Authenticate /> },
     { path: '/*', element: <Navigate to="/" /> }
+    //{ path: '/', element: <Navigate to="/" /> }
   ])
   return (
     <OurContext.Provider value={{
@@ -58,26 +61,50 @@ function Authenticate() {
   let [type, setType] = useState('login')
   let [error, setError] = useState('')
   let thisEmail = useRef()
-  let query = useQuery()
-  useEffect(() => { confirmUser() }, [])
+  let [token,setToken] = useState('')
+  let [tokenId,setTokenId] = useState('')
+  let url=window.location.href;
+  useEffect(() => { setToken(getTokenAndTokenId('token=')); setTokenId(getTokenAndTokenId('tokenId=')) }, [])
+  useEffect(() => { confirmUser() }, [token,tokenId])
+  //Navigate to home page if user is logged in
+  if (app.currentUser) {
+    return <Navigate to="/" />
+  }
+  function getTokenAndTokenId(start_str) {
+    const start_index = url.indexOf(start_str);
+    // If the start string isn't found, return an empty string
+    if (start_index === -1) {
+      return "";
+    }
+    // Find the index of the end character
+    const end_index = url.indexOf('&', start_index + start_str.length);
+    // If the end character isn't found, return the substring from the start index to the end of the string
+    if (end_index === -1) {
+      return url.substring(start_index + start_str.length);
+    }
+    // Return the substring from the start index to the end index
+    return url.substring(start_index + start_str.length, end_index);
+  }
   function confirmUser() {
-    let token = query.get('token')
-    let tokenId = query.get('tokenId')
-    if (token && tokenId) {
+    console.log('token=', token)
+    if (url.includes('/settingNewPassword') && token && tokenId) {
+      setType('settingNewPassword')
+    }
+    else if (token && tokenId) {
       app.emailPasswordAuth.confirmUser({ token, tokenId }).then((user) => {
         setError({ text: "Email Confimed! Please sign in to continue", type: "success" })
-        console.log('Confimed user', user);
       }).catch((e) => { setError({ text: e.error, type: "danger" }) })
     }
+    return
   }
   function resendConfirmationEmail(email) {
     setError({ text: 'Sending Email...', type: "info" })
-    app.emailPasswordAuth.resendConfirmationEmail({ email }).then((user) => { setError({ text: 'Email sent! Please check your inbox', type: "success" }) }).catch((e) => { setError({ text: e.error, type: "danger" }) })
+    app.emailPasswordAuth.resendConfirmationEmail({ email }).then((user) => { setError({ text: 'Email sent! Please check your inbox', type: "success" }); setTimeout(()=>setError(''),[3000]) }).catch((e) => { setError({ text: e.error, type: "danger" }) })
   }
   let handleSubmit = async (e) => {
     e.preventDefault()
     let email = e.target.email.value
-    let password = e.target.password.value
+    let password = e.target.password && e.target.password.value
     let confirmPassword = e.target.confirmPassword ? e.target.confirmPassword.value : null
     if (type == 'login') {
       setError({ text: 'Loading...', type: "info" })
@@ -99,7 +126,18 @@ function Authenticate() {
       })
     }
     if (type == 'forgotPassword') {
-      app.emailPasswordAuth.sendResetPasswordEmail(thisEmail.current.value).then(() => { setError({ text: 'Email sent! Please check your email to continue', type: "success" }) }).catch((e) => { setError({ text: e.error, type: "danger" }) })
+      app.emailPasswordAuth.sendResetPasswordEmail({ email: thisEmail.current.value }).then(() => { setError({ text: 'Email sent! Please check your email to continue', type: "success" }); setTimeout(()=>setError(''),[3000]) }).catch((e) => { setError({ text: e.error, type: "danger" }) })
+    }
+    if (type == 'settingNewPassword') {app.emailPasswordAuth.resetPassword({
+        password,
+        token,
+        tokenId,
+      }).then((user) => {
+        setError({ text: "Password Changed! Please sign in to continue", type: "success" })
+        setType('login')
+        handleSubmit(e)
+      }
+      ).catch((e) => { setError({ text: e.error, type: "danger" }) })
     }
   }
   function showError() {
@@ -113,6 +151,7 @@ function Authenticate() {
       )
     }
   }
+
   return (
     <div className="row">
       <div className="col-md-6 offset-md-3">
@@ -120,20 +159,19 @@ function Authenticate() {
           <div className="card-body">
             <h1 className="text-center">Login</h1>
             <form onSubmit={handleSubmit}>
+              <FloatingLabel className='mb-3' label="Username">
+                <Form.Control placeholder="Username" name="email" ref={thisEmail} />
+              </FloatingLabel>
+              {!(type == 'forgotPassword') && <FloatingLabel className='mb-3' label="Password">
+                <Form.Control type="password" placeholder={type == 'settingNewPassword' ? "New Password" : "Password"} name="password" />
+              </FloatingLabel>}
+              {type == 'register' ?
+                <FloatingLabel className='mb-3' label="Confirm Password">
+                  <Form.Control type="password" placeholder="Confirm Password" name="confirmPassword" />
+                </FloatingLabel>
+                : null}
               <div className="form-group mb-3">
-                <label htmlFor="email">Email</label>
-                <input type="email" className="form-control" name="email" ref={thisEmail} />
-              </div>
-              <div className="form-group mb-3">
-                <label htmlFor="password">Password</label>
-                <input type="password" className="form-control" name="password" />
-              </div>
-              {type == 'register' ? <div className="form-group mb-3">
-                <label htmlFor="confirmPassword">Confirm Password</label>
-                <input type="password" className="form-control" name="confirmPassword" />
-              </div> : null}
-              <div className="form-group mb-3">
-                <button type="submit" className="btn btn-primary">{type == 'login' ? 'Login' : type == 'register' ? 'Register' : 'Reset Password'}</button>
+                <button type="submit" className="btn btn-primary">{type == 'login' ? 'Login' : type == 'register' ? 'Register' : type == 'forgotPassword' ? "Send Reset Link" : type == 'settingNewPassword' ? "Set New Password" : null}</button>
               </div>
               <div className="form-group mb-3">
 
@@ -168,6 +206,7 @@ function Authenticate() {
     </div>
   )
 }
+
 
 function CheckDataByAdmin() {
   let { data, user } = useContext(OurContext)
@@ -440,7 +479,7 @@ function StudentInfoDisplay({ student }) {
           </>
         ) : <div className="row"><button className="btn btn-success" onClick={() => setDepositingFees(true)}>New Fees Deposit</button>   </div>}
         <div className="d-flex flex-column">
-        <Link to={`/print?student=${JSON.stringify(student)}`} target='_blank' className='d-flex justify-content-center'><button type="button" className="print-button btn btn-info mt-2">Print</button></Link>
+          <Link to={`/print?student=${JSON.stringify(student)}`} target='_blank' className='d-flex justify-content-center'><button type="button" className="print-button btn btn-info mt-2">Print</button></Link>
         </div>
       </div>
     </div>
