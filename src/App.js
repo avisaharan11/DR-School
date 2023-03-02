@@ -103,9 +103,9 @@ function Authenticate() {
   }
   let handleSubmit = async (e) => {
     e.preventDefault()
-    let email = e.target.email.value
-    let password = e.target.password && e.target.password.value
-    let confirmPassword = e.target.confirmPassword ? e.target.confirmPassword.value : null
+    let email = e.target.email.value.toLowerCase()
+    let password = e.target.password && e.target.password.value.toLowerCase()
+    let confirmPassword = e.target.confirmPassword ? e.target.confirmPassword.value.toLowerCase() : null
     if (type == 'login') {
       setError({ text: 'Loading...', type: "info" })
       app.logIn(Realm.Credentials.emailPassword(email, password)).then((user) => setUser(user)).catch((e) => { setError({ text: e.error, type: "danger" }); })
