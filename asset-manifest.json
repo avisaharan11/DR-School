@@ -1,14 +1,14 @@
 {
   "files": {
-    "main.css": "/DR-School/static/css/main.89521216.css",
-    "main.js": "/DR-School/static/js/main.43832949.js",
-    "static/media/logoIcon.ico": "/DR-School/static/media/logoIcon.0576b51b51472c239660.ico",
-    "index.html": "/DR-School/index.html",
-    "main.89521216.css.map": "/DR-School/static/css/main.89521216.css.map",
-    "main.43832949.js.map": "/DR-School/static/js/main.43832949.js.map"
+    "main.css": "/static/css/main.89521216.css",
+    "main.js": "/static/js/main.04cb28c4.js",
+    "static/media/logoIcon.ico": "/static/media/logoIcon.0576b51b51472c239660.ico",
+    "index.html": "/index.html",
+    "main.89521216.css.map": "/static/css/main.89521216.css.map",
+    "main.04cb28c4.js.map": "/static/js/main.04cb28c4.js.map"
   },
   "entrypoints": [
     "static/css/main.89521216.css",
-    "static/js/main.43832949.js"
+    "static/js/main.04cb28c4.js"
   ]
 }
