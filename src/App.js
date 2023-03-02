@@ -35,7 +35,7 @@ function App() {
     }
   }, [user, client])
   let routes = useRoutes([
-    { path: '/', element: user && user.isLoggedIn ? <div className="container"><Navbar /><CheckDataByAdmin /></div> : <><Navbar /><Authenticate /> </> },
+    { path: '/', element: user && user.isLoggedIn ? <div className="container"><Navbar /><CheckDataByAdmin /></div> : <div className="container"><Navbar /><Authenticate /> </div> },
     { path: '/print', element: <PrintLayout /> },
     { path: '/resetpassword', element: <Authenticate /> },
     { path: '/settingNewPassword', element: <Authenticate /> },
@@ -493,7 +493,7 @@ function Navbar() {
       <div className="container-fluid">
         <Link className="navbar-brand" to="/">
           <img src={logoIcon} width="30" height="30" className="d-inline-block align-top" alt=""></img>
-          DR School - Info
+          DR School - Internal
         </Link>
         <button className="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
           <span className="navbar-toggler-icon"></span>
