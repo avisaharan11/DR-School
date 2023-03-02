@@ -207,7 +207,6 @@ function Authenticate() {
   )
 }
 
-
 function CheckDataByAdmin() {
   let { data, user } = useContext(OurContext)
   const classGradeRef = useRef(0);
@@ -506,7 +505,7 @@ function Navbar() {
           </ul>
         </div>
         <div className="d-flex">
-          {user ? <button className="btn btn-outline-danger" onClick={() => { app.currentUser.logOut(); setUser(null) }}>Logout</button> : <Link className="btn btn-outline-success" to="/" >Login</Link>}
+          {user ? <button className="btn btn-outline-danger" onClick={() => { app.currentUser.logOut(); setUser(null) }}>Logout</button> : null}
         </div>
       </div>
     </nav>
