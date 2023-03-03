@@ -455,6 +455,7 @@ function StudentInfoDisplay({ student }) {
             <p className="card-text">Mother Name: {student.motherName}</p>
             <p className="card-text">Aadhaar Number: {student.aadhaarNumber}</p>
             <p className="card-text">SRN: {student.srn}</p>
+            {student.sibling && student.sibling!=' ' && student.sibling!='  ' ? <p className="card-text">Sibling: {student.sibling}</p> : null}
             {student.deposits ? getTransactionHistory() : null}
           </>
         ) : null}
