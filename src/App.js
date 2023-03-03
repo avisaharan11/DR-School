@@ -599,6 +599,4 @@ function PrintLayout() {
   );
 }
 
-
-
 export default App;
