@@ -86,7 +86,6 @@ function Authenticate() {
     return url.substring(start_index + start_str.length, end_index);
   }
   function confirmUser() {
-    console.log('token=', token)
     if (url.includes('/settingNewPassword') && token && tokenId) {
       setType('settingNewPassword')
     }
@@ -257,7 +256,6 @@ function StudentInfoDisplay({ student }) {
   let [depositingFees, setDepositingFees] = useState(false)
   let collection = client.db('school').collection('students')
   let amountToDepositRef = useRef(0)
-  let dateOfDepositRef = useRef('')
   let feesDepositCancelRef = useRef('')
   let updateCancelRef = useRef('')
   let [newContactNumber, setNewContactNumber] = useState([])
@@ -282,30 +280,16 @@ function StudentInfoDisplay({ student }) {
         + currentdate.getSeconds();
       return datetime;
     }
-    function formatDate(input) {
-      let datePart = input.match(/\d+/g)
-      let year = datePart[0]
-      let month = datePart[1]
-      let day = datePart[2]
-
-      return day + '/' + month + '/' + year;
-    }
     if (amountToDepositRef.current.value == 0) {
       alert('Please enter an amount to deposit')
       amountToDepositRef.current.focus()
       return
     }
-    if (dateOfDepositRef.current.value == '') {
-      alert('Please enter a date of deposit')
-      dateOfDepositRef.current.focus()
-      return
-    }
-    let date = formatDate(dateOfDepositRef.current.value)
-    let confirmDeposit = window.confirm(`Confirm deposit Rs.${amountToDepositRef.current.value} on ${date} for ${student.name} (${student.rollNumber})`)
+    let confirmDeposit = window.confirm(`Confirm deposit Rs.${amountToDepositRef.current.value} on ${getDate()} for ${student.name} (${student.rollNumber})`)
     async function deposit() {
       collection.updateOne(
         { rollNumber: student.rollNumber },
-        { $push: { deposits: { amount: Number(amountToDepositRef.current.value), date } } }
+        { $push: { deposits: { amount: Number(amountToDepositRef.current.value), date: getDate() } } }
       ).then(() => { setDepositingFees(false); alert('Fees deposited successfully'); updateData() }).catch((err) => alert(err))
     }
     if (confirmDeposit) deposit()
@@ -446,7 +430,7 @@ function StudentInfoDisplay({ student }) {
     <div className="card">
       <div className="card-body">
         <h5 className="card-title">{student.name}</h5>
-        <h6 className="card-subtitle mb-2 text-muted">{student.rollNumber}</h6>
+        <h6 className="card-subtitle mb-2 text-muted">Roll: {student.rollNumber}</h6>
         <p className="card-text">Guardian Name: {student.fatherName}</p>
         <div className="card-text mb-3">Contact Numbers: {student.contactNumbers && contactNumbersSpace()} </div>
         <p className="card-text">Fees Pending: {Number(student.feesPending2122 ? student.feesPending2122 : 0 + student.feesPending2223 ? student.feesPending2223 : 0) - (student.deposits ? getDepositTotal() : 0)}</p>
@@ -469,7 +453,6 @@ function StudentInfoDisplay({ student }) {
                 <span className="input-group-text">Rs.</span>
               </div>
               <input type="number" autoFocus className="form-control" ref={amountToDepositRef} onFocus={() => { if (feesDepositCancelRef.current) feesDepositCancelRef.current.scrollIntoView() }} onKeyDown={(e) => { if (e.key === 'Enter') depositFees() }} placeholder='Amount'></input>
-              <input type="date" ref={dateOfDepositRef} onKeyDown={(e) => { if (e.key === 'Enter') depositFees() }} placeholder='Deposit Date'></input>
             </div>
             <div className="row">
               <button className="btn btn-success mb-1" onClick={() => depositFees()}>Deposit</button>
