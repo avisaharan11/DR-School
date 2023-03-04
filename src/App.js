@@ -26,6 +26,7 @@ function App() {
   function updateData() {
     client.db('school').collection('students').find().then((res) => { setData(res) }).catch((e) => { console.log(e) })
   }
+
   useEffect(() => {
     if (!client && user) {
       setClient(app.currentUser.mongoClient("mongodb-atlas"))
@@ -34,6 +35,7 @@ function App() {
       updateData()
     }
   }, [user, client])
+
   let routes = useRoutes([
     { path: '/', element: user && user.isLoggedIn ? <div className="container"><Navbar /><CheckDataByAdmin /></div> : <div className="container"><Navbar /><Authenticate /> </div> },
     { path: '/print', element: <PrintLayout /> },
@@ -262,7 +264,7 @@ function StudentInfoDisplay({ student }) {
   let [updatingContactNumber, setUpdatingContactNumber] = useState()
   let [settingNewContactNumber, setSettingNewContactNumber] = useState()
 
-  useEffect(() => { setDepositingFees(false); setUpdatingContactNumber(false) }, [student.rollNumber])
+  useEffect(() => { setDepositingFees(false); setUpdatingContactNumber(false) ; setMoreDetails(false)}, [student.rollNumber])
   useEffect(() => {
     setNewContactNumber('')
     setSettingNewContactNumber(false)
