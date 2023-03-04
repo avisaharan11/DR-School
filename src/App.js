@@ -263,6 +263,7 @@ function StudentInfoDisplay({ student }) {
   let [newContactNumber, setNewContactNumber] = useState([])
   let [updatingContactNumber, setUpdatingContactNumber] = useState()
   let [settingNewContactNumber, setSettingNewContactNumber] = useState()
+  let [savingContact, setSavingContact] = useState(false)
 
   useEffect(() => { setDepositingFees(false); setUpdatingContactNumber(false) ; setMoreDetails(false)}, [student.rollNumber])
   useEffect(() => {
@@ -340,14 +341,16 @@ function StudentInfoDisplay({ student }) {
     //add contact number to database
     function addContactNumber(newContactNumber) {
       if (newContactNumber.length == 0) return alert('Please enter a contact number')
+      setSavingContact(true)
       collection.updateOne(
         { rollNumber: student.rollNumber },
         { $push: { contactNumbers: newContactNumber } }
-      ).then(() => { updateData() }).catch((err) => alert(err))
+      ).then(() => { updateData(); setSavingContact(false)  }).catch((err) => alert(err))
     }
     //remove contact number from database
     async function removeContactNumber(oldContactNumber) {
       if (!(window.confirm(`Confirm removing ${oldContactNumber} for ${student.name} (${student.rollNumber})`))) return
+      
       collection.updateOne(
         { rollNumber: student.rollNumber },
         { $set: { contactNumbers: student.contactNumbers.filter((contactNumber) => contactNumber != oldContactNumber) } }
@@ -356,26 +359,29 @@ function StudentInfoDisplay({ student }) {
     //update contact number in database
     function updateContactNumber(oldContactNumber, newContactNumber) {
       if (newContactNumber.length == 0) return alert('Please enter a contact number')
+      setSavingContact(true)
       collection.updateOne(
         { rollNumber: student.rollNumber },
         { $set: { contactNumbers: student.contactNumbers.map((contactNumber) => contactNumber == oldContactNumber ? newContactNumber : contactNumber) } }
-      ).then(() => { updateData() }).catch((err) => alert(err))
+      ).then(() => { updateData(); setSavingContact(false) }).catch((err) => alert(err))
     }
 
     //if no contact number is present, show button to add contact number, which when clicked will show an input box below the contacts currently present and add button to call addContactNumber function with the new contact number that is in the input field as argument
     function addContactNumberInput() {
       return (
+         
         <>
+        {!savingContact &&
           <div className="input-group mb-3">
             <div className="input-group-prepend">
               <span className="input-group-text">+91 </span>
             </div>
             <input type="number" autoFocus className="form-control" placeholder="Contact Number" onChange={(e) => setNewContactNumber(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') addContactNumber(newContactNumber) }} />
             <div className="input-group-append">
-              <button className="btn btn-success" onClick={() => addContactNumber(newContactNumber)}>Add</button>
-              <button className="btn btn-danger" onClick={() => setSettingNewContactNumber(false)}>Cancel</button>
+              <button className="btn btn-success" onClick={() => addContactNumber(newContactNumber)} >Add</button>
+              <button className="btn btn-danger" onClick={() => setSettingNewContactNumber(false)} >Cancel</button>
             </div>
-          </div>
+          </div>}
         </>
       )
     }
@@ -392,6 +398,7 @@ function StudentInfoDisplay({ student }) {
                     <button className="btn btn-outline-warning mx-1 btn-sm" onClick={() => { setUpdatingContactNumber(contactNumber) }}>Edit</button>
                     <button className="btn btn-outline-danger btn-sm" onClick={() => removeContactNumber(contactNumber)}>Delete</button>
                   </div></> : (<>
+                  {!savingContact &&
                     <div className="input-group mb-3">
                       <div className="input-group-prepend">
                         <span className="input-group-text">+91 </span>
@@ -406,6 +413,7 @@ function StudentInfoDisplay({ student }) {
                       <button className="btn btn-danger" onClick={() => { setUpdatingContactNumber(false); }}>Cancel</button><span ref={updateCancelRef}></span>
 
                     </div>
+                    }
                   </>
                 )}
 
