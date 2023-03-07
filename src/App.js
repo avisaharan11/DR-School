@@ -2,7 +2,7 @@ import { useEffect, useState, useRef, createContext, useContext, useMemo } from 
 import * as Realm from "realm-web";
 import 'react-datepicker/dist/react-datepicker.css';
 import FloatingLabel from 'react-bootstrap/FloatingLabel';
-import Form from 'react-bootstrap/Form';
+import { Form, Button, Table } from 'react-bootstrap';
 import { useRoutes, Link, Navigate, useLocation, useSearchParams } from "react-router-dom";
 import logoIcon from './/images/logoIcon.ico'
 import './/images/printStyles.css'
@@ -41,6 +41,7 @@ function App() {
     { path: '/print', element: <PrintLayout /> },
     { path: '/resetpassword', element: <Authenticate /> },
     { path: '/settingNewPassword', element: <Authenticate /> },
+    { path: '/feesPendingComponent', element: <PendingFeesComponent data={data}/> },
     { path: '/*', element: <Navigate to="/" /> }
     //{ path: '/', element: <Navigate to="/" /> }
   ])
@@ -63,11 +64,11 @@ function Authenticate() {
   let [type, setType] = useState('login')
   let [error, setError] = useState('')
   let thisEmail = useRef()
-  let [token,setToken] = useState('')
-  let [tokenId,setTokenId] = useState('')
-  let url=window.location.href;
+  let [token, setToken] = useState('')
+  let [tokenId, setTokenId] = useState('')
+  let url = window.location.href;
   useEffect(() => { setToken(getTokenAndTokenId('token=')); setTokenId(getTokenAndTokenId('tokenId=')) }, [])
-  useEffect(() => { confirmUser() }, [token,tokenId])
+  useEffect(() => { confirmUser() }, [token, tokenId])
   //Navigate to home page if user is logged in
   if (app.currentUser) {
     return <Navigate to="/" />
@@ -100,7 +101,7 @@ function Authenticate() {
   }
   function resendConfirmationEmail(email) {
     setError({ text: 'Sending Email...', type: "info" })
-    app.emailPasswordAuth.resendConfirmationEmail({ email }).then((user) => { setError({ text: 'Email sent! Please check your inbox', type: "success" }); setTimeout(()=>setError(''),[3000]) }).catch((e) => { setError({ text: e.error, type: "danger" }) })
+    app.emailPasswordAuth.resendConfirmationEmail({ email }).then((user) => { setError({ text: 'Email sent! Please check your inbox', type: "success" }); setTimeout(() => setError(''), [3000]) }).catch((e) => { setError({ text: e.error, type: "danger" }) })
   }
   let handleSubmit = async (e) => {
     e.preventDefault()
@@ -127,9 +128,10 @@ function Authenticate() {
       })
     }
     if (type == 'forgotPassword') {
-      app.emailPasswordAuth.sendResetPasswordEmail({ email: thisEmail.current.value }).then(() => { setError({ text: 'Email sent! Please check your email to continue', type: "success" }); setTimeout(()=>setError(''),[3000]) }).catch((e) => { setError({ text: e.error, type: "danger" }) })
+      app.emailPasswordAuth.sendResetPasswordEmail({ email: thisEmail.current.value }).then(() => { setError({ text: 'Email sent! Please check your email to continue', type: "success" }); setTimeout(() => setError(''), [3000]) }).catch((e) => { setError({ text: e.error, type: "danger" }) })
     }
-    if (type == 'settingNewPassword') {app.emailPasswordAuth.resetPassword({
+    if (type == 'settingNewPassword') {
+      app.emailPasswordAuth.resetPassword({
         password,
         token,
         tokenId,
@@ -177,9 +179,9 @@ function Authenticate() {
               <div className="form-group mb-3">
 
                 {type == 'login' ? <div className="d-flex justify-content-between">
-                  <div>
+                  {/* <div>
                     <Link to="#" onClick={() => setType('register')}>Register</Link>
-                  </div>
+                  </div> */}
                   <div>
                     <Link to="#" onClick={() => setType('forgotPassword')}>Forgot Password</Link>
                   </div>
@@ -265,7 +267,7 @@ function StudentInfoDisplay({ student }) {
   let [settingNewContactNumber, setSettingNewContactNumber] = useState()
   let [savingContact, setSavingContact] = useState(false)
 
-  useEffect(() => { setDepositingFees(false); setUpdatingContactNumber(false) ; setMoreDetails(false)}, [student.rollNumber])
+  useEffect(() => { setDepositingFees(false); setUpdatingContactNumber(false); setMoreDetails(false) }, [student.rollNumber])
   useEffect(() => {
     setNewContactNumber('')
     setSettingNewContactNumber(false)
@@ -345,12 +347,12 @@ function StudentInfoDisplay({ student }) {
       collection.updateOne(
         { rollNumber: student.rollNumber },
         { $push: { contactNumbers: newContactNumber } }
-      ).then(() => { updateData(); setSavingContact(false)  }).catch((err) => alert(err))
+      ).then(() => { updateData(); setSavingContact(false) }).catch((err) => alert(err))
     }
     //remove contact number from database
     async function removeContactNumber(oldContactNumber) {
       if (!(window.confirm(`Confirm removing ${oldContactNumber} for ${student.name} (${student.rollNumber})`))) return
-      
+
       collection.updateOne(
         { rollNumber: student.rollNumber },
         { $set: { contactNumbers: student.contactNumbers.filter((contactNumber) => contactNumber != oldContactNumber) } }
@@ -369,19 +371,19 @@ function StudentInfoDisplay({ student }) {
     //if no contact number is present, show button to add contact number, which when clicked will show an input box below the contacts currently present and add button to call addContactNumber function with the new contact number that is in the input field as argument
     function addContactNumberInput() {
       return (
-         
+
         <>
-        {!savingContact &&
-          <div className="input-group mb-3">
-            <div className="input-group-prepend">
-              <span className="input-group-text">+91 </span>
-            </div>
-            <input type="number" autoFocus className="form-control" placeholder="Contact Number" onChange={(e) => setNewContactNumber(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') addContactNumber(newContactNumber) }} />
-            <div className="input-group-append">
-              <button className="btn btn-success" onClick={() => addContactNumber(newContactNumber)} >Add</button>
-              <button className="btn btn-danger" onClick={() => setSettingNewContactNumber(false)} >Cancel</button>
-            </div>
-          </div>}
+          {!savingContact &&
+            <div className="input-group mb-3">
+              <div className="input-group-prepend">
+                <span className="input-group-text">+91 </span>
+              </div>
+              <input type="number" autoFocus className="form-control" placeholder="Contact Number" onChange={(e) => setNewContactNumber(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') addContactNumber(newContactNumber) }} />
+              <div className="input-group-append">
+                <button className="btn btn-success" onClick={() => addContactNumber(newContactNumber)} >Add</button>
+                <button className="btn btn-danger" onClick={() => setSettingNewContactNumber(false)} >Cancel</button>
+              </div>
+            </div>}
         </>
       )
     }
@@ -398,21 +400,21 @@ function StudentInfoDisplay({ student }) {
                     <button className="btn btn-outline-warning mx-1 btn-sm" onClick={() => { setUpdatingContactNumber(contactNumber) }}>Edit</button>
                     <button className="btn btn-outline-danger btn-sm" onClick={() => removeContactNumber(contactNumber)}>Delete</button>
                   </div></> : (<>
-                  {!savingContact &&
-                    <div className="input-group mb-3">
-                      <div className="input-group-prepend">
-                        <span className="input-group-text">+91 </span>
+                    {!savingContact &&
+                      <div className="input-group mb-3">
+                        <div className="input-group-prepend">
+                          <span className="input-group-text">+91 </span>
+                        </div>
+                        <input type="number" autoFocus
+                          onFocus={() => {
+                            if (updateCancelRef.current) updateCancelRef.current.scrollIntoView()
+                            setNewContactNumber(contactNumber)
+                          }} onKeyDown={(e) => { if (e.key === 'Enter') updateContactNumber(contactNumber, newContactNumber) }} className="form-control" value={newContactNumber} onChange={(e) => setNewContactNumber(e.target.value)} />
+
+                        <button className="btn btn-success" onClick={() => { updateContactNumber(contactNumber, newContactNumber); }}>Save</button>
+                        <button className="btn btn-danger" onClick={() => { setUpdatingContactNumber(false); }}>Cancel</button><span ref={updateCancelRef}></span>
+
                       </div>
-                      <input type="number" autoFocus
-                        onFocus={() => {
-                          if (updateCancelRef.current) updateCancelRef.current.scrollIntoView()
-                          setNewContactNumber(contactNumber)
-                        }} onKeyDown={(e) => { if (e.key === 'Enter') updateContactNumber(contactNumber, newContactNumber) }} className="form-control" value={newContactNumber} onChange={(e) => setNewContactNumber(e.target.value)} />
-
-                      <button className="btn btn-success" onClick={() => { updateContactNumber(contactNumber, newContactNumber); }}>Save</button>
-                      <button className="btn btn-danger" onClick={() => { setUpdatingContactNumber(false); }}>Cancel</button><span ref={updateCancelRef}></span>
-
-                    </div>
                     }
                   </>
                 )}
@@ -449,7 +451,7 @@ function StudentInfoDisplay({ student }) {
             <p className="card-text">Mother Name: {student.motherName}</p>
             <p className="card-text">Aadhaar Number: {student.aadhaarNumber}</p>
             <p className="card-text">SRN: {student.srn}</p>
-            {student.sibling && student.sibling!=' ' && student.sibling!='  ' ? <p className="card-text">Sibling: {student.sibling}</p> : null}
+            {student.sibling && student.sibling != ' ' && student.sibling != '  ' ? <p className="card-text">Sibling: {student.sibling}</p> : null}
             {student.deposits ? getTransactionHistory() : null}
           </>
         ) : null}
@@ -608,5 +610,89 @@ function PrintLayout() {
     </>
   );
 }
+
+function PendingFeesComponent({ data }) {
+  const [rollNumber, setRollNumber] = useState('');
+  const [dob, setDob] = useState('');
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    // TODO: authenticate user and retrieve their data from the `data` prop
+    // For simplicity, let's just assume we found the data of the user with the entered rollNumber and dob
+    const user = data.find((u) => u.rollNumber === rollNumber);
+    // Render user details in a table
+    if (user) {
+      return (
+        <Table striped bordered hover>
+          <tbody>
+            <tr>
+              <td>Name</td>
+              <td>{user.name}</td>
+            </tr>
+            <tr>
+              <td>Class</td>
+              <td>{user.classGrade}</td>
+            </tr>
+            <tr>
+              <td>Father's Name</td>
+              <td>{user.fatherName}</td>
+            </tr>
+            <tr>
+              <td>Mother's Name</td>
+              <td>{user.motherName}</td>
+            </tr>
+            <tr>
+              <td>Contact Numbers</td>
+              <td>{user.contactNumbers.join(', ')}</td>
+            </tr>
+            <tr>
+              <td>Fees Pending</td>
+              <td>{user.feesPending2223}</td>
+            </tr>
+            <tr>
+              <td>Aadhaar Number</td>
+              <td>{user.aadhaarNumber}</td>
+            </tr>
+            <tr>
+              <td>Deposits</td>
+              <td>
+                {user.deposits.map((d) => (
+                  <div key={d.date}>
+                    {d.date}: {d.amount}
+                  </div>
+                ))}
+              </td>
+            </tr>
+          </tbody>
+        </Table>
+      );
+    } else {
+      // Render an error message if user data is not found
+      return <div>User not found</div>;
+    }
+  };
+  return (
+    <div>
+      <h2>Check Pending Fees</h2>
+      <Form onSubmit={handleSubmit}>
+        <Form.Group controlId="formRollNumber">
+          <Form.Label>Roll Number</Form.Label>
+          <Form.Control type="number" placeholder="Enter roll number" value={rollNumber} onChange={(e) => setRollNumber(e.target.value)} />
+        </Form.Group>
+
+        <Form.Group controlId="formDob">
+          <Form.Label>Date of Birth</Form.Label>
+          <Form.Control type="date" placeholder="Enter date of birth" value={dob} onChange={(e) => setDob(e.target.value)} />
+        </Form.Group>
+
+        <Button variant="primary" type="submit">
+          Get Details
+        </Button>
+      </Form>
+
+      {/* TODO: show user details here */}
+    </div>
+  );
+};
 
 export default App;
