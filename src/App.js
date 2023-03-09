@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef, createContext, useContext, useMemo } from "react";
 import * as Realm from "realm-web";
+import { isMobile } from 'react-device-detect';
 import 'react-datepicker/dist/react-datepicker.css';
 import FloatingLabel from 'react-bootstrap/FloatingLabel';
 import { Form, Button, Table } from 'react-bootstrap';
@@ -41,7 +42,7 @@ function App() {
     { path: '/print', element: <PrintLayout /> },
     { path: '/resetpassword', element: <Authenticate /> },
     { path: '/settingNewPassword', element: <Authenticate /> },
-    { path: '/forstudent', element: <ForStudent/> },
+    { path: '/forstudent', element: <ForStudent /> },
     { path: '/syncMongo', element: <SyncMongo /> },
     { path: '/*', element: <Navigate to="/" /> }
     //{ path: '/', element: <Navigate to="/" /> }
@@ -68,14 +69,15 @@ function Authenticate() {
   let [token, setToken] = useState('')
   let [tokenId, setTokenId] = useState('')
   let url = window.location.href;
-  useEffect(() => { setToken(getTokenAndTokenId('token=')); setTokenId(getTokenAndTokenId('tokenId='))
-  if (app.currentUser && app.currentUser.isLoggedIn && app.currentUser._profile.data.email) {
-    <Navigate to="/" />
-  }
-  else{
-    app.currentUser && app.currentUser.logOut()
-  }
-}, [])
+  useEffect(() => {
+    setToken(getTokenAndTokenId('token=')); setTokenId(getTokenAndTokenId('tokenId='))
+    if (app.currentUser && app.currentUser.isLoggedIn && app.currentUser._profile.data.email) {
+      <Navigate to="/" />
+    }
+    else {
+      app.currentUser && app.currentUser.logOut()
+    }
+  }, [])
   useEffect(() => { confirmUser() }, [token, tokenId])
   //Navigate to home page if user is logged in
 
@@ -127,14 +129,14 @@ function Authenticate() {
         return
       }
       setError({ text: 'Loading...', type: "success" })
-      if(email.includes("@drmschool.ac.in")){
+      if (email.includes("@drmschool.ac.in")) {
         app.emailPasswordAuth.registerUser({ email, password }).then(() => { setError({ text: 'Email sent! Please confirm your email to continue', type: "success" }) }).catch((e) => {
           if (e.error == 'name already in use') {
             setError({ text: 'Email already in use, please login', type: "danger" })
           }
         })
       }
-      else{
+      else {
         setError({ text: 'Please use your school email to register', type: "danger" })
       }
     }
@@ -655,12 +657,12 @@ function ForStudent() {
   async function loginAnonymous() {
     // Create an anonymous credential
     const credentials = Realm.Credentials.anonymous();
-  
+
     // Authenticate the user
     const user = await app.logIn(credentials);
     // `App.currentUser` updates to match the logged in user
     console.assert(user.id === app.currentUser.id);
-  
+
     return user;
   }
   function InfoDisplay() {
@@ -684,9 +686,11 @@ function ForStudent() {
       }
       return deposits.reduce((partialSum, a) => Number(partialSum) + Number(a), 0)
     }
-    useEffect(() => { setDepositingFees(false); setUpdatingContactNumber(false); setMoreDetails(false); setFeesPending(
-      Number(student.feesPending2122 ? student.feesPending2122 : 0 + student.feesPending2223 ? student.feesPending2223 : 0) - (student.deposits ? getDepositTotal() : 0)
-    ) }, [student.rollNumber])
+    useEffect(() => {
+      setDepositingFees(false); setUpdatingContactNumber(false); setMoreDetails(false); setFeesPending(
+        Number(student.feesPending2122 ? student.feesPending2122 : 0 + student.feesPending2223 ? student.feesPending2223 : 0) - (student.deposits ? getDepositTotal() : 0)
+      )
+    }, [student.rollNumber])
     useEffect(() => {
       setNewContactNumber('')
       setSettingNewContactNumber(false)
@@ -711,7 +715,7 @@ function ForStudent() {
       }
       let confirmDeposit = window.confirm(`Confirm deposit Rs.${amountToDepositRef.current.value} on ${getDate()} for ${student.name} (${student.rollNumber})`)
       async function deposit() {
-        alert (`Please login using ${student.name}${student.classGrade}.${student.rollNumber}@drmschool.ac.in or using staff account for this action.`)
+        alert(`Please login using ${student.name}${student.classGrade}.${student.rollNumber}@drmschool.ac.in or using staff account for this action.`)
         setDepositingFees(false)
         return
       }
@@ -753,28 +757,28 @@ function ForStudent() {
       //add contact number to database
       function addContactNumber(newContactNumber) {
         if (newContactNumber.length == 0) return alert('Please enter a contact number')
-        alert (`Please login using ${student.name}${student.classGrade}.${student.rollNumber}@drmschool.ac.in or using staff account for this action.`)
+        alert(`Please login using ${student.name}${student.classGrade}.${student.rollNumber}@drmschool.ac.in or using staff account for this action.`)
         setSettingNewContactNumber(false)
         return
       }
       //remove contact number from database
       async function removeContactNumber(oldContactNumber) {
-        alert (`Please login using ${student.name}${student.classGrade}.${student.rollNumber}@drmschool.ac.in or using staff account for this action.`)
+        alert(`Please login using ${student.name}${student.classGrade}.${student.rollNumber}@drmschool.ac.in or using staff account for this action.`)
         setUpdatingContactNumber(false)
         return
       }
       //update contact number in database
       function updateContactNumber(oldContactNumber, newContactNumber) {
         if (newContactNumber.length == 0) return alert('Please enter a contact number')
-        alert (`Please login using ${student.name}${student.classGrade}.${student.rollNumber}@drmschool.ac.in or using staff account for this action.`)
+        alert(`Please login using ${student.name}${student.classGrade}.${student.rollNumber}@drmschool.ac.in or using staff account for this action.`)
         setUpdatingContactNumber(false)
         return
       }
-  
+
       //if no contact number is present, show button to add contact number, which when clicked will show an input box below the contacts currently present and add button to call addContactNumber function with the new contact number that is in the input field as argument
       function addContactNumberInput() {
         return (
-  
+
           <>
             {!savingContact &&
               <div className="input-group mb-3">
@@ -813,16 +817,16 @@ function ForStudent() {
                               if (updateCancelRef.current) updateCancelRef.current.scrollIntoView()
                               setNewContactNumber(contactNumber)
                             }} onKeyDown={(e) => { if (e.key === 'Enter') updateContactNumber(contactNumber, newContactNumber) }} className="form-control" value={newContactNumber} onChange={(e) => setNewContactNumber(e.target.value)} />
-  
+
                           <button className="btn btn-success" onClick={() => { updateContactNumber(contactNumber, newContactNumber); }}>Save</button>
                           <button className="btn btn-danger" onClick={() => { setUpdatingContactNumber(false); }}>Cancel</button><span ref={updateCancelRef}></span>
-  
+
                         </div>
                       }
                     </>
                   )}
-  
-  
+
+
                 </div>
               )
             })}
@@ -841,6 +845,45 @@ function ForStudent() {
       }
       return contactsDisplay()
     }
+    function payLinkClick() {
+      const upiLink = `upi://pay?pa=avisaharan1@dbs&am=${feesPending}&tr=${student.rollNumber}&tn=${student.name}%20Class: ${student.classGrade}%20Roll: ${student.rollNumber}`;
+      const handleUpiClick = () => {
+        window.location.href = upiLink;
+      };
+      handleUpiClick()
+    }
+
+    const BankDetailsTable = ({ bankAccountName, bankAccountNumber, bankIFSCCode, upiID }) => {
+      return (
+        <Table striped bordered hover>
+          <thead>
+            <tr>
+              <th>Bank Account</th>
+              <th>Details</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Name</td>
+              <td>{bankAccountName}</td>
+            </tr>
+            <tr>
+              <td>Number</td>
+              <td>{bankAccountNumber}</td>
+            </tr>
+            <tr>
+              <td>IFSC Code</td>
+              <td>{bankIFSCCode}</td>
+            </tr>
+            <tr>
+              <td>UPI ID</td>
+              <td>{upiID}</td>
+            </tr>
+          </tbody>
+        </Table>
+      );
+    };
+    
 
     return (
       <div className="card">
@@ -863,21 +906,30 @@ function ForStudent() {
             <button className="btn btn-primary mb-2 mt-n3 " onClick={() => setMoreDetails(!moreDetails)}>{moreDetails ? 'Show Less Details ↑' : 'Show More Details ↓'}</button>
           </div>
           {depositingFees ? (
-            <>
-              <div className="input-group mb-3">
-                <div className="input-group-prepend">
-                  <span className="input-group-text">Rs.</span>
+            // isMobile && window.navigator.share
+             5==5?
+              <>
+                <div className="input-group mb-3">
+                  <div className="input-group-prepend">
+                    <span className="input-group-text">Rs.</span>
+                  </div>
+                  <input type="number" autoFocus className="form-control" ref={amountToDepositRef} onFocus={() => { if (feesDepositCancelRef.current) feesDepositCancelRef.current.scrollIntoView() }} onKeyDown={(e) => { if (e.key === 'Enter') depositFees() }} placeholder='Amount'></input>
                 </div>
-                <input type="number" autoFocus className="form-control" ref={amountToDepositRef} onFocus={() => { if (feesDepositCancelRef.current) feesDepositCancelRef.current.scrollIntoView() }} onKeyDown={(e) => { if (e.key === 'Enter') depositFees() }} placeholder='Amount'></input>
-              </div>
-              <div className="row">
-              <a href={`upi://pay?pa=38093269020@SBIN0004599.ifsc.npci&tr=${student.rollNumber} & tn=${student.name} ${student.rollNumber}'s Fees & pn=DR Memorial High School&cu=INR`} className="btn btn-success mb-1">Deposit</a>
-                {/* <button className="btn btn-success mb-1" onClick={() => depositFees()}>Deposit</button> */}
-                <button className="btn btn-danger mb-1" onClick={() => { setDepositingFees(false) }}>Cancel</button>
-              </div>
-              <p ref={feesDepositCancelRef}></p>
-            </>
+                <div className="row">
+                  <button className="btn btn-success mb-1" onClick={payLinkClick}>Pay</button>
+                  {/* <button className="btn btn-success mb-1" onClick={() => depositFees()}>Deposit</button> */}
+                  <button className="btn btn-danger mb-1" ref={feesDepositCancelRef} onClick={() => { setDepositingFees(false) }}>Cancel</button>
+                </div>
+              </> : <>
+                
+                <div className={`alert alert-dismissible alert-info mt-3`}>
+                  <p>We currently only support online payments on mobile devices with UPI app installed. Please use direct transfer instead:</p>
+                  {BankDetailsTable({ bankAccountName: 'DR Memorial High School', bankAccountNumber: '38093269020', bankIFSCCode: 'SBIN0004599', upiID: '38093269020@SBIN0004599.ifsc.npci or avisaharan1@dbs' })}
+                </div>
+              </>
+              
           ) : <div className="row"><button className="btn btn-success" onClick={() => setDepositingFees(true)}>New Fees Deposit</button>   </div>}
+          
           <div className="d-flex flex-column">
             <Link to={`/print?student=${JSON.stringify(student)}`} target='_blank' className='d-flex justify-content-center'><button type="button" className="print-button btn btn-info mt-2">Print</button></Link>
           </div>
@@ -891,32 +943,32 @@ function ForStudent() {
     return filteredData
   }
   useEffect(() => {
-    if(!user)
-  loginAnonymous().then((user)=>setUser(user))
-  },[])
-  useEffect(() => {setRollNumber(rollNumberRef.current.value)}, [classGrade])
+    if (!user)
+      loginAnonymous().then((user) => setUser(user))
+  }, [])
+  useEffect(() => { setRollNumber(rollNumberRef.current.value) }, [classGrade])
   function handleSubmit(e) {
     e.preventDefault()
     let filteredData = filterData()
-    let student = filteredData.find((student) => student.rollNumber == rollNumber )
+    let student = filteredData.find((student) => student.rollNumber == rollNumber)
     if (student) {
       console.log(student)
-      if(!student.dob){
-        setError({type:'danger',text: "Your date of birth is not registered with us. Please contact the school office."})
-        setTimeout(()=>setError(null),5000)
+      if (!student.dob) {
+        setError({ type: 'danger', text: "Your date of birth is not registered with us. Please contact the school office." })
+        setTimeout(() => setError(null), 5000)
         return
       }
-      let dateOriginal=student.dob.toString().split("-").reverse()
-      let dateRef=dobRef.current.value.split("-")
-      if (Number(dateOriginal[0])==Number(dateRef[0]) && Number(dateOriginal[1])==Number(dateRef[1]) && Number(dateOriginal[2])==Number(dateRef[2])) {
+      let dateOriginal = student.dob.toString().split("-").reverse()
+      let dateRef = dobRef.current.value.split("-")
+      if (Number(dateOriginal[0]) == Number(dateRef[0]) && Number(dateOriginal[1]) == Number(dateRef[1]) && Number(dateOriginal[2]) == Number(dateRef[2])) {
         setStudent(student)
       } else {
-        setError({type:'danger',text: "Please Try again. Date of Birth not valid."})
-        setTimeout(()=>setError(null),5000)
+        setError({ type: 'danger', text: "Date of Birth is incorrect. Please try again" })
+        setTimeout(() => setError(null), 5000)
       }
     } else {
-      setError({type:'danger',text: "Student not found"})
-      setTimeout(()=>setError(null),5000)
+      setError({ type: 'danger', text: "Student not found" })
+      setTimeout(() => setError(null), 5000)
     }
   }
   function showError() {
@@ -924,33 +976,34 @@ function ForStudent() {
       return (
         <div className={`alert alert-dismissible alert-${error.type} mt-3`}>
           <button type="button" className="btn-close" data-bs-dismiss="alert"></button>
-          <strong>{error.text}</strong></div>
+          <strong>{error.text}</strong>
+        </div>
       )
     }
   }
   return (
     <div className="container">
-    <nav className="navbar navbar-expand-lg" >
-      <div className="container-fluid">
-        <Link className="navbar-brand" to="/">
-          <img src={logoIcon} width="30" height="30" className="d-inline-block align-top" alt=""></img>
-          DR School - Student Info
-        </Link>
-        <button className="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
-          <span className="navbar-toggler-icon"></span>
-        </button>
-        <div className="collapse navbar-collapse" id="navbarSupportedContent">
-          <ul className="navbar-nav me-auto mb-2 mb-lg-0">
-          <li className="nav-item">
-              <Link className="nav-link active" aria-current="page" to="/">Login</Link>
-            </li>
-            <li className="nav-item">
-              <Link className="nav-link active" aria-current="page" to="http://www.drmschool.ac.in" target="_blank">Main School Website</Link>
-            </li>
-          </ul>
+      <nav className="navbar navbar-expand-lg" >
+        <div className="container-fluid">
+          <Link className="navbar-brand" to="/">
+            <img src={logoIcon} width="30" height="30" className="d-inline-block align-top" alt=""></img>
+            DR School - Student Info
+          </Link>
+          <button className="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+            <span className="navbar-toggler-icon"></span>
+          </button>
+          <div className="collapse navbar-collapse" id="navbarSupportedContent">
+            <ul className="navbar-nav me-auto mb-2 mb-lg-0">
+              <li className="nav-item">
+                <Link className="nav-link active" aria-current="page" to="/">Login</Link>
+              </li>
+              <li className="nav-item">
+                <Link className="nav-link active" aria-current="page" to="http://www.drmschool.ac.in" target="_blank">Main School Website</Link>
+              </li>
+            </ul>
+          </div>
         </div>
-      </div>
-    </nav>
+      </nav>
       <form>
         <FloatingLabel controlId="floatingSelect" label="Class" className="mb-3">
           <Form.Select name="classGrade" aria-label="Select Class" ref={classGradeRef} onChange={(e) => { setClassGrade(e.target.value) }}>
@@ -960,7 +1013,7 @@ function ForStudent() {
         </FloatingLabel>
         {classGrade ?
           <FloatingLabel controlId="floatingSelect" label="Name & Roll Number" className="mb-3">
-            <Form.Select aria-label="Select Student" ref={rollNumberRef} onChange={(e) => {setRollNumber(e.target.value); setStudent(null);}}>
+            <Form.Select aria-label="Select Student" ref={rollNumberRef} onChange={(e) => { setRollNumber(e.target.value); setStudent(null); }}>
               {data && data.filter((student) => student.classGrade == classGrade).map((student) => <option key={student.rollNumber} value={student.rollNumber}>{student.name} & {student.rollNumber}</option>)}
             </Form.Select>
           </FloatingLabel> : null}
@@ -969,9 +1022,8 @@ function ForStudent() {
           <Form.Control type="date" ref={dobRef} placeholder="DD/MM/YYYY" />
         </Form.Group>}
         <div className="d-flex flex-column mb-3">
-        {rollNumber && <Button variant="primary" type="input" onClick={(e)=>handleSubmit(e)}>Get Details</Button>}
+          {rollNumber && <Button variant="primary" type="input" onClick={(e) => handleSubmit(e)}>Get Details</Button>}
         </div>
-        
       </form>
       {student && <InfoDisplay />}
       {showError()}
@@ -979,8 +1031,8 @@ function ForStudent() {
   );
 };
 
-function SyncMongo({client}){
-  let [newData,setNewData] = useState([])
+function SyncMongo({ client }) {
+  let [newData, setNewData] = useState([])
   function updateData() {
     client.db('school').collection('rough').find().then((res) => { setNewData(res) }).catch((e) => { console.log(e) })
   }
@@ -993,10 +1045,10 @@ function SyncMongo({client}){
     })
   }
   useEffect(() => updateFieldsInOldData(), [newData])
-  return(
+  return (
     <>
       <h1>Sync Mongo</h1>
-      <button onClick={()=>updateData()}>Update Data</button>
+      <button onClick={() => updateData()}>Update Data</button>
     </>
   )
 }
