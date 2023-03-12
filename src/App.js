@@ -278,7 +278,7 @@ function StudentInfoDisplay({ student }) {
   let [settingNewContactNumber, setSettingNewContactNumber] = useState()
   let [savingContact, setSavingContact] = useState(false)
 
-  useEffect(() => { setDepositingFees(false); setUpdatingContactNumber(false); setMoreDetails(false) }, [student.rollNumber])
+  useEffect(() => { setDepositingFees(false); setUpdatingContactNumber(false); setMoreDetails(false); }, [student.rollNumber])
   useEffect(() => {
     setNewContactNumber('')
     setSettingNewContactNumber(false)
@@ -292,8 +292,7 @@ function StudentInfoDisplay({ student }) {
         + (currentdate.getMonth() + 1) + "/"
         + currentdate.getFullYear() + " @ "
         + currentdate.getHours() + ":"
-        + currentdate.getMinutes() + ":"
-        + currentdate.getSeconds();
+        + currentdate.getMinutes()
       return datetime;
     }
     if (amountToDepositRef.current.value == 0) {
@@ -449,6 +448,80 @@ function StudentInfoDisplay({ student }) {
     }
     return contactsDisplay()
   }
+  // function to update studentInfo state object when user enters data
+  const handlePrint = () => {
+    const printContents = document.getElementById('receipt').innerHTML;
+    const popupWin = window.open('', '_blank', 'width=600,height=600');
+    popupWin.document.open();
+    popupWin.document.write(`
+      <html>
+        <head>
+          <title>Fee Receipt</title>
+          <style>
+            @media print {
+              body {
+                width: 58mm;
+                height: auto;
+                font-family: Arial, sans-serif;
+                font-size: 15px;
+                font-weight: bold;
+                margin: 0;
+                padding: 10px;
+                line-height: 1.2;
+              }
+              h1, h2, h3, h4, h5, h6 {
+                margin: 0;
+                line-height: 1.2;
+              }
+              h1 {
+                font-size: 20px;
+                font-weight: bold;
+              }
+              h2 {
+                font-size: 17px;
+                font-weight: bold;
+              }
+              hr {
+                border: none;
+                border-top: 1px solid black;
+                margin: 10px 0;
+              }
+              p, span {
+                margin: 0;
+                line-height: 1.2;
+              }
+              table {
+                width: 100%;
+                border-collapse: collapse;
+                margin-bottom: 10px;
+              }
+              table, th, td {
+                border: 1px solid black;
+              }
+              th, td {
+                padding: 5px;
+                text-align: left;
+                line-height: 1.2;
+              }
+              th {
+                background-color: #ddd;
+              }
+              tfoot td {
+                text-align: right;
+                font-weight: bold;
+              }
+            }
+          </style>
+        </head>
+        <body>
+          ${printContents}
+        </body>
+      </html>
+    `);
+    popupWin.document.close();
+    popupWin.print();
+  };
+
   return (
     <div className="card">
       <div className="card-body">
@@ -485,7 +558,11 @@ function StudentInfoDisplay({ student }) {
           </>
         ) : <div className="row"><button className="btn btn-success" onClick={() => setDepositingFees(true)}>New Fees Deposit</button>   </div>}
         <div className="d-flex flex-column">
-          <Link to={`/print?student=${JSON.stringify(student)}`} target='_blank' className='d-flex justify-content-center'><button type="button" className="print-button btn btn-info mt-2">Print</button></Link>
+          <button className="btn btn-info mt-2" onClick={handlePrint}>Print Fees Receipt</button>
+        </div>
+        <div>
+          <Receipt student={student} />
+          
         </div>
       </div>
     </div>
@@ -622,6 +699,56 @@ function PrintLayout() {
         </div>
       </div>
     </>
+  );
+}
+
+function Receipt({student}) {
+  console.log(student)
+  const printTable = student.deposits && student.deposits.map((transaction) => (
+    <tr key={transaction.date}>
+      <td><strong>{transaction.date.split("@")[0]}</strong></td>
+      <td><strong>{transaction.amount}</strong></td>
+    </tr>
+  ));
+
+  const printContacts = student.contactNumbers && student.contactNumbers.map((contactNumber) => (
+    <span key={contactNumber}>{contactNumber}<br /></span>
+  ));
+  const totalDeposits = student.deposits && student.deposits.reduce((acc, transaction) => acc + parseInt(transaction.amount), 0);
+  const pendingAmount = student.feesPending2223 - totalDeposits;
+
+  return (
+    <div id="receipt" hidden='true'>
+      <h1>DR Memorial School</h1>
+      <h2>Student Fees Receipt</h2>
+      <hr />
+      <p><strong>For:</strong> {student.name}</p>
+      <p><strong>Class:</strong> {student.classGrade}</p>
+      <p><strong>Roll Number:</strong> {student.rollNumber}</p>
+      <p><strong>Guardian:</strong> {student.fatherName}</p>
+      <p><strong>Contact: </strong>{printContacts}</p>
+      <hr />
+      <table>
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Amount</th>
+          </tr>
+        </thead>
+        <tbody>
+          {printTable}
+        </tbody>
+        <tfoot>
+          <tr>
+            <td><strong>Total:</strong></td>
+            <td><strong>{totalDeposits}</strong></td>
+          </tr>
+        </tfoot>
+      </table>
+      <hr />
+      <p><strong>Pending Fees:</strong> {pendingAmount}</p>
+      <p><strong>Thank you for your support.</strong></p>
+    </div>
   );
 }
 
@@ -883,7 +1010,7 @@ function ForStudent() {
         </Table>
       );
     };
-    
+
 
     return (
       <div className="card">
@@ -907,7 +1034,7 @@ function ForStudent() {
           </div>
           {depositingFees ? (
             // isMobile && window.navigator.share
-             5==5?
+            5 == 5 ?
               <>
                 <div className="input-group mb-3">
                   <div className="input-group-prepend">
@@ -921,15 +1048,15 @@ function ForStudent() {
                   <button className="btn btn-danger mb-1" ref={feesDepositCancelRef} onClick={() => { setDepositingFees(false) }}>Cancel</button>
                 </div>
               </> : <>
-                
+
                 <div className={`alert alert-dismissible alert-info mt-3`}>
                   <p>We currently only support online payments on mobile devices with UPI app installed. Please use direct transfer instead:</p>
                   {BankDetailsTable({ bankAccountName: 'DR Memorial High School', bankAccountNumber: '38093269020', bankIFSCCode: 'SBIN0004599', upiID: '38093269020@SBIN0004599.ifsc.npci or avisaharan1@dbs' })}
                 </div>
               </>
-              
+
           ) : <div className="row"><button className="btn btn-success" onClick={() => setDepositingFees(true)}>New Fees Deposit</button>   </div>}
-          
+
           <div className="d-flex flex-column">
             <Link to={`/print?student=${JSON.stringify(student)}`} target='_blank' className='d-flex justify-content-center'><button type="button" className="print-button btn btn-info mt-2">Print</button></Link>
           </div>
