@@ -2,8 +2,8 @@ import { useEffect, useState, useRef, createContext, useContext, useMemo } from 
 import * as Realm from "realm-web";
 import { isMobile } from 'react-device-detect';
 import 'react-datepicker/dist/react-datepicker.css';
-import FloatingLabel from 'react-bootstrap/FloatingLabel';
-import { Form, Button, Table } from 'react-bootstrap';
+import { Form, Button, Table, InputGroup, Container, FloatingLabel, Row } from 'react-bootstrap';
+import { BsSave } from 'react-icons/bs';
 import { useRoutes, Link, Navigate, useLocation, useSearchParams } from "react-router-dom";
 import logoIcon from './/images/logoIcon.ico'
 import './/images/printStyles.css'
@@ -38,12 +38,13 @@ function App() {
   }, [user, client])
 
   let routes = useRoutes([
-    { path: '/', element: user && user.isLoggedIn && user._profile.data.email ? <div className="container">{console.log(user)}<Navbar /><CheckDataByAdmin /></div> : <div className="container"><Navbar /><Authenticate /> </div> },
+    { path: '/', element: user && user.isLoggedIn && user._profile.data.email ? user._profile.data.email != 'avisaharan1@gmail.com' ? <MarksEntry /> : <div className="container">{console.log(user)}<Navbar /><CheckDataByAdmin /></div> : <div className="container"><Navbar /><Authenticate /> </div> },
     { path: '/print', element: <PrintLayout /> },
     { path: '/resetpassword', element: <Authenticate /> },
     { path: '/settingNewPassword', element: <Authenticate /> },
     { path: '/forstudent', element: <ForStudent /> },
     { path: '/syncMongo', element: <SyncMongo /> },
+    { path: '/marksEntry', element: <MarksEntry /> },
     { path: '/*', element: <Navigate to="/" /> }
     //{ path: '/', element: <Navigate to="/" /> }
   ])
@@ -562,7 +563,7 @@ function StudentInfoDisplay({ student }) {
         </div>
         <div>
           <Receipt student={student} />
-          
+
         </div>
       </div>
     </div>
@@ -582,17 +583,20 @@ function Navbar() {
           <span className="navbar-toggler-icon"></span>
         </button>
         <div className="collapse navbar-collapse" id="navbarSupportedContent">
-          <ul className="navbar-nav me-auto mb-2 mb-lg-0">
+          <ul className="navbar-nav mb-2 mb-lg-0">
             <li className="nav-item">
               <Link className="nav-link active" aria-current="page" to="/">Home</Link>
             </li>
+            {!user &&
+              <li className="nav-item">
+                <Link className="nav-link active" aria-current="page" to="/forStudent">Guest Account</Link>
+              </li>}
             <li className="nav-item">
-              <Link className="nav-link active" aria-current="page" to="/forStudent">Guest Account</Link>
+              {user && user._profile.data.email ? <button className="btn btn-outline-danger" onClick={() => { app.currentUser.logOut(); setUser(null) }}>Logout {user._profile.data.email}</button> : null}
             </li>
           </ul>
         </div>
         <div className="d-flex">
-          {user && user._profile.data.email ? <button className="btn btn-outline-danger" onClick={() => { app.currentUser.logOut(); setUser(null) }}>Logout</button> : null}
         </div>
       </div>
     </nav>
@@ -702,7 +706,7 @@ function PrintLayout() {
   );
 }
 
-function Receipt({student}) {
+function Receipt({ student }) {
   console.log(student)
   const printTable = student.deposits && student.deposits.map((transaction) => (
     <tr key={transaction.date}>
@@ -718,7 +722,7 @@ function Receipt({student}) {
   const pendingAmount = student.feesPending2223 - totalDeposits;
 
   return (
-    <div id="receipt" hidden='true'>
+    <div id="receipt" hidden>
       <h1>DR Memorial School</h1>
       <h2>Student Fees Receipt</h2>
       <hr />
@@ -1178,6 +1182,167 @@ function SyncMongo({ client }) {
       <button onClick={() => updateData()}>Update Data</button>
     </>
   )
+}
+
+//function to let teachers enter students marks
+function MarksEntry() {
+  let { data, updateData, user, client } = useContext(OurContext)
+  let [subjects, setSubjects] = useState([])
+  let [subject, setSubject] = useState(0)
+  let [classGrade, setClassGrade] = useState(0)
+  const [maxMarks, setMaxMarks] = useState(100);
+  const [marks, setMarks] = useState(0);
+  let oldMarks=0
+  let oldMaxMarks=0
+  let classGradeRef = useRef()
+  let subjectRef = useRef()
+  let classGrades = ['Nursery', 'KG', 1, 2, 3, 4, 5, 6, 7, 8, 9]
+  const [saveButtonPosition, setSaveButtonPosition] = useState("static");
+  const tableRef = useRef(null);
+
+  useEffect(() => {
+    function handleScroll() {
+      if (tableRef.current) {
+        const tableBottom = tableRef.current.getBoundingClientRect().bottom;
+        const viewportBottom = window.innerHeight;
+        if (tableBottom > viewportBottom) {
+          setSaveButtonPosition("fixed");
+        } else {
+          setSaveButtonPosition("static");
+        }
+      }
+    }
+    window.addEventListener("scroll", handleScroll);
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+    };
+  }, []);
+
+  const handleSubmit = (event) => {
+    event.preventDefault();
+    if (subject != 0) {
+
+      client.db('school').collection('marks').updateOne(
+        { classGrade: classGrade, subject: subject },
+        { $set: { maxMarks: maxMarks, marks: marks } },
+        { upsert: true }
+      ).then(console.log(`set ${subject} $'s maxMarks to ${maxMarks} and marks to ${marks}`)).catch((e) => { console.log(e) })
+    }
+  };
+  //when classGrade changes set subjects
+  useEffect(() => {
+    if (classGrade != 0) {
+      if (classGrade == 'Nursery' || classGrade == 'KG' || classGrade == 1)
+        setSubjects(['English Oral', 'English Theory', 'Maths Oral', 'Maths Theory', 'Hindi Oral', 'Hindi Theory'])
+      else if (classGrade == 2 || classGrade == 3)
+        setSubjects(['Maths', 'English', 'Hindi', 'EVS', 'GK'])
+      else if (classGrade == 4 || classGrade == 5)
+        setSubjects(['Maths', 'English', 'Hindi', 'EVS', 'Punjabi', 'GK'])
+      else if (classGrade == 6 || classGrade == 7 || classGrade == 8 || classGrade == 9)
+        setSubjects(['Maths', 'English', 'Hindi', 'Punjabi', 'Science', 'Social Science'])
+      else setSubjects(0)
+    }
+  }, [classGrade])
+  //when subjects are set set subject to first subject
+  useEffect(() => {
+    if (subjects.length > 0) {
+      setSubject(subjects[0])
+    }
+  }, [subjects])
+
+  //when either subject or classGrade changes get maxMarks and marks from db
+  useEffect(() => {
+    if (subject != 0) {
+      client.db('school').collection('marks').find({ classGrade: classGrade, subject: subject }).then((res) => {
+        if (res.length > 0) {
+          setMaxMarks(res[0].maxMarks)
+          setMarks(res[0].marks)
+        }
+        else {
+          setMaxMarks(0)
+          setMarks(100)
+        }
+      }).catch((e) => { console.log(e) })
+    }
+    oldMarks=marks
+    oldMaxMarks=maxMarks
+  }, [subject, classGrade])
+
+  if (user && user.isLoggedIn)
+    return (
+      <Container>
+        <Navbar />
+        <h1>Marks Entry</h1>
+        <Row>
+          <Form onSubmit={handleSubmit}>
+            <FloatingLabel controlId="floatingSelect" label="Class" className="mb-3">
+              <Form.Select name="classGrade" aria-label="Select Class" ref={classGradeRef} onChange={(e) => { setClassGrade(e.target.value) }}>
+                {data && data.length > 0 ? (classGrade == 0 ? <option>Select Class</option> : null) : <option>Loading Data...</option>}
+                {data && data.length > 0 ? (classGrades.map((grade) => <option key={grade} value={grade}>{grade}</option>)) : null}
+              </Form.Select>
+            </FloatingLabel>
+            {classGrade != 0 && subjects != 0 ?
+              <FloatingLabel controlId="floatingSelect" label="Select Subject" className="mb-3">
+                <Form.Select aria-label="Select Subject" ref={subjectRef} onChange={(e) => setSubject(e.target.value)}>
+                  {subjects.map((subject) =>
+                    <option key={subject} value={subject}>{subject}</option>)}
+                </Form.Select>
+              </FloatingLabel> : null}
+            {/* Enter marks for each student */}
+            {subject != 0 && data &&
+              <>
+                <InputGroup className="mb-3">
+                  <InputGroup.Text>Maximum Marks</InputGroup.Text>
+                  <Form.Control type="number" value={maxMarks} onChange={(e) => setMaxMarks(e.target.value)} />
+                </InputGroup>
+                <Table striped bordered hover ref={tableRef} className="mb-5">
+                  <thead>
+                    <tr>
+                      <th>Roll</th>
+                      <th>Name</th>
+                      <th>Marks</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {data.filter((student) => student.classGrade == classGrade).sort((a, b) => a.rollNumber - b.rollNumber).map((student) => (
+                      <tr key={student.rollNumber}>
+                        <td>{student.rollNumber}</td>
+                        <td>{student.name}</td>
+                        <td>
+                          <Form.Group key={student.rollNumber}>
+                            <Form.Control
+                              type="number" min={0} max={maxMarks}
+                              value={marks[student.rollNumber] || ''}
+                              onChange={
+                                (event) => {
+                                  setMarks({
+                                    ...marks,
+                                    [student.rollNumber]: event.target.value,
+                                  });
+                                }
+                              }
+                            />
+                          </Form.Group>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </Table>
+              <Button
+      variant={marks != oldMarks || maxMarks != oldMaxMarks ? "secondary" : "secondary"}
+      className="position-fixed bottom-0 end-0 m-3"
+      style={{ borderRadius: '20%', width: '60px', height: '60px' }}
+      type="submit"
+    > Upload
+      <BsSave size={30} />
+    </Button>
+                </>}
+          </Form>
+        </Row>
+
+      </Container>
+    )
+  else return <Navigate to="/" />
 }
 
 export default App;
