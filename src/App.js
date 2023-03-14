@@ -1190,10 +1190,10 @@ function MarksEntry() {
   let [subjects, setSubjects] = useState([])
   let [subject, setSubject] = useState(0)
   let [classGrade, setClassGrade] = useState(0)
-  const [maxMarks, setMaxMarks] = useState(100);
+  const [maxMarks, setMaxMarks] = useState(0);
+  const [oldMaxMarks, setOldMaxMarks] = useState(0);
   const [marks, setMarks] = useState(0);
-  let oldMarks=0
-  let oldMaxMarks=0
+  const [oldMarks, setOldMarks] = useState(0);
   let classGradeRef = useRef()
   let subjectRef = useRef()
   let classGrades = ['Nursery', 'KG', 1, 2, 3, 4, 5, 6, 7, 8, 9]
@@ -1221,12 +1221,11 @@ function MarksEntry() {
   const handleSubmit = (event) => {
     event.preventDefault();
     if (subject != 0) {
-
       client.db('school').collection('marks').updateOne(
         { classGrade: classGrade, subject: subject },
         { $set: { maxMarks: maxMarks, marks: marks } },
         { upsert: true }
-      ).then(console.log(`set ${subject} $'s maxMarks to ${maxMarks} and marks to ${marks}`)).catch((e) => { console.log(e) })
+      ).then(console.log(`set ${subject} $'s maxMarks to ${maxMarks} and marks to ${marks}`)).then(()=>{setOldMarks(marks);setOldMaxMarks(maxMarks)}).catch((e) => { console.log(e) })
     }
   };
   //when classGrade changes set subjects
@@ -1253,19 +1252,21 @@ function MarksEntry() {
   //when either subject or classGrade changes get maxMarks and marks from db
   useEffect(() => {
     if (subject != 0) {
-      client.db('school').collection('marks').find({ classGrade: classGrade, subject: subject }).then((res) => {
+      client.db('school').collection('marks').find({ classGrade, subject }).then((res) => {
         if (res.length > 0) {
           setMaxMarks(res[0].maxMarks)
           setMarks(res[0].marks)
+          setOldMaxMarks(res[0].maxMarks)
+          setOldMarks(res[0].marks)
         }
         else {
           setMaxMarks(0)
           setMarks(100)
+          setOldMaxMarks(0)
+          setOldMarks(100)
         }
       }).catch((e) => { console.log(e) })
     }
-    oldMarks=marks
-    oldMaxMarks=maxMarks
   }, [subject, classGrade])
 
   if (user && user.isLoggedIn)
@@ -1329,7 +1330,7 @@ function MarksEntry() {
                   </tbody>
                 </Table>
               <Button
-      variant={marks != oldMarks || maxMarks != oldMaxMarks ? "secondary" : "secondary"}
+      variant={marks != oldMarks || maxMarks != oldMaxMarks ? "danger" : "secondary"}
       className="position-fixed bottom-0 end-0 m-3"
       style={{ borderRadius: '20%', width: '60px', height: '60px' }}
       type="submit"
