@@ -522,7 +522,32 @@ function StudentInfoDisplay({ student }) {
     popupWin.document.close();
     popupWin.print();
   };
-
+  function getPendingFees(){
+    let pending2122=0
+    let pending2223=0
+    console.log('Sibling: '+student.sibling.length)
+    if(student.sibling && student.sibling.length>1){
+      return(
+        <>
+          <p className="card-text">Fees with: {student.sibling}</p>
+          </>
+      )
+    }
+    if(student.feesPending2122 || student.feesPending2223) {
+      if(student.feesPending2122) pending2122 = Number(student.feesPending2122)- Number((student.deposits ? getDepositTotal() : 0));
+      if(student.feesPending2223){
+        if(!pending2122) pending2223 = Number(student.feesPending2223) - Number((student.deposits ? getDepositTotal() : 0));
+        else if(pending2122>0) pending2223 = Number(student.feesPending2223);
+        else if(pending2122<=0) pending2223 = Number(student.feesPending2223) + Number(pending2122);
+      }
+    }
+    return(
+      <>
+        {pending2122 && pending2122>0?<p className="card-text">Fees Pending 2021-22: {pending2122}</p>:null}
+        <p className="card-text">Fees Pending 2022-23: {pending2223}</p>
+      </>
+    )
+  }
   return (
     <div className="card">
       <div className="card-body">
@@ -530,13 +555,12 @@ function StudentInfoDisplay({ student }) {
         <h6 className="card-subtitle mb-2 text-muted">Roll: {student.rollNumber}</h6>
         <p className="card-text">Guardian Name: {student.fatherName}</p>
         <div className="card-text mb-3">Contact Numbers: {student.contactNumbers && contactNumbersSpace()} </div>
-        <p className="card-text">Fees Pending: {Number(student.feesPending2122 ? student.feesPending2122 : 0 + student.feesPending2223 ? student.feesPending2223 : 0) - (student.deposits ? getDepositTotal() : 0)}</p>
+        {getPendingFees()}
         {moreDetails ? (
           <>
             <p className="card-text">Mother Name: {student.motherName}</p>
             <p className="card-text">Aadhaar Number: {student.aadhaarNumber}</p>
             <p className="card-text">SRN: {student.srn}</p>
-            {student.sibling && student.sibling != ' ' && student.sibling != '  ' ? <p className="card-text">Sibling: {student.sibling}</p> : null}
             {student.deposits ? getTransactionHistory() : null}
           </>
         ) : null}
